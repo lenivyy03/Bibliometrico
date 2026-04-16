@@ -1,54 +1,52 @@
 import pandas as pd
+from pandas.errors import EmptyDataError
 
-#Función para cargar csv
+
+# Función para cargar un CSV y validar su estructura básica
 def cargar_csv(ruta):
     try:
-        # Convierte datos tabulares a una estructura manipulables
-        df = pd.read_csv(ruta, encoding="utf-8-sig")
+        # Intentamos leer con encodings comunes en archivos exportados
+        ultimo_error = None
+        for encoding in ("utf-8-sig", "utf-8", "latin1", "cp1252"):
+            try:
+                df = pd.read_csv(ruta, encoding=encoding)
+                break
+            except UnicodeDecodeError as e:
+                ultimo_error = e
+        else:
+            raise ultimo_error
 
-        # Cuantos datos fueron cargados
-        total = len(df)
+        # Limpiamos espacios en nombres de columnas
+        df.columns = df.columns.str.strip()
 
-        # Mostramos cuantos datos registro el archivo csv
-        print(f"Cargando {total} registros")
-
-
-        # Esta linea es solo para ver que las columnas del csv se vean ->
-        # print(df.columns.tolist())
-
-        # Lista de columnas
         columnas_criticas = ["Authors", "Title", "Year", "Cited by", "Affiliations"]
-        columnas_opcionales = ["DOI"]
+        columnas_apa = ["Source title", "Volume", "Issue", "DOI"]
+        columnas_opcionales = ["Page start", "Page end", "Art. No."]
 
-        # Creamos memoria para las columnas faltantes
-        columnas_faltantes = []
+        faltantes_criticas = [c for c in columnas_criticas if c not in df.columns]
+        faltantes_apa = [c for c in columnas_apa if c not in df.columns]
+        faltantes_opcionales = [c for c in columnas_opcionales if c not in df.columns]
 
-        for columna in columnas_criticas:
-            if columna not in df.columns:
-                #Agregamos al array las columnas que faltaron
-                columnas_faltantes.append(columna)
+        archivo_vacio = df.empty
+        ok = len(faltantes_criticas) == 0 and not archivo_vacio
 
-        # Si hubo columnas faltantes indicarlo
-        if len(columnas_faltantes) > 0:
-            print(f"Faltaron las siguientes columnas: {columnas_faltantes}")
-            return None
+        return {
+            "ok": ok,
+            "dataframe": df,
+            "total_registros": len(df),
+            "faltantes_criticas": faltantes_criticas,
+            "faltantes_apa": faltantes_apa,
+            "faltantes_opcionales": faltantes_opcionales,
+            "archivo_vacio": archivo_vacio,
+            "mensaje": "Archivo cargado correctamente" if ok else "El archivo está vacío o no cumple con las columnas críticas requeridas",
+            "preview": df.head().to_dict(orient="records")
+        }
 
-        for columna in columnas_opcionales:
-            if columna not in df.columns:
-                print(f"Faltaron las siguientes columna: {columna}")
-
-        #Imprimir las primeras 5 Filas, por ahora se muestran en terminal
-        print(df.head())
-
-        # Regresamos el archivo
-        return df
-
-    # En caso de no encontrar un archivo mandamos una advertencia
     except FileNotFoundError:
-        print("El archivo no existe")
+        return {"ok": False, "error": "El archivo no existe"}
+    except EmptyDataError:
+        return {"ok": False, "error": "El archivo está vacío"}
     except Exception as e:
-        print(f"Ocurrió un error: {e}")
+        return {"ok": False, "error": str(e)}
 
-
-resultado = cargar_csv("scopus.csv")
 

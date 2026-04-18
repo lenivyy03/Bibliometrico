@@ -21,7 +21,7 @@ def calcular_promedio_citas_anual(df, año_actual=None):
     return df
 
 # Funcion que ordena las publicaciones por promedio de citas anual
-def obtener_ranking_promedio_citas(df):
+def ordenar_por_promedio_citas(df):
     # Verifica si la columna ya existe, si no la calcula
     if 'Promedio_Citas_Anual' not in df.columns:
         df = calcular_promedio_citas_anual(df)

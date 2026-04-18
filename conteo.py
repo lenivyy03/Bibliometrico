@@ -7,7 +7,7 @@ def contar_total_publicaciones(df):
         return 0
     return len(df)
 
-# Funcion cuenta los autores unicos
+# Funcion que cuenta los autores unicos
 def contar_autores_unicos(df):
     # Verifica si no recibio nada o si no tiene una columna de Authors
     if df is None or 'Authors' not in df.columns:
@@ -36,7 +36,7 @@ def contar_articulos_autor_unico(df):
         # Detecta si los autores estan separados por ; o ,
         sep = ';' if ';' in entrada else ','
 
-        # regresa True si al dividir la celda solo hay un autor, False si hay mas 
+        # Regresa True si al dividir la celda solo hay un autor, False si hay mas 
         return len(entrada.split(sep)) == 1
 
     # Aplica la funcion a cada celda, haciendo una columna de True/False

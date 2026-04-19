@@ -1,54 +1,108 @@
 import pandas as pd
+from pandas.errors import EmptyDataError
 
-#Función para cargar csv
+
+# Mapeo de columnas hacia las métricas que dependen de ellas
+COLUMNAS_METRICAS = {
+    "Authors": [
+        "Top 10 autores",
+        "Número de autores únicos",
+        "Artículos con un solo autor",
+        "Mínimo, máximo y promedio de autores por artículo",
+    ],
+    "Title": [
+        "Referencias APA",
+        "Lista de trabajos más citados",
+        "Top 10 trabajos más relevantes",
+    ],
+    "Year": [
+        "Promedio de citas anual por publicación",
+        "Referencias APA",
+    ],
+    "Cited by": [
+        "Lista de trabajos más citados",
+        "Top 10 trabajos más relevantes",
+        "Promedio de citas anual por publicación",
+    ],
+    "Affiliations": [
+        "Lista de universidades por frecuencia",
+        "Top 10 universidades",
+        "Lista de países",
+        "Top 10 países",
+    ],
+    "Source title": [
+        "Referencias APA (revista incompleta)",
+    ],
+    "Volume": [
+        "Referencias APA (volumen incompleto)",
+    ],
+    "Issue": [
+        "Referencias APA (número de issue incompleto)",
+    ],
+    "DOI": [
+        "Referencias APA (sin enlace DOI)",
+        "Acceso directo al artículo desde el top 10",
+    ],
+}
+
+
+# Obtener las métricas afectadas según las columnas faltantes
+def metricas_afectadas(faltantes):
+    afectadas = {}
+    for columna in faltantes:
+        if columna in COLUMNAS_METRICAS:
+            afectadas[columna] = COLUMNAS_METRICAS[columna]
+    return afectadas
+
+
+# Cargar un CSV y validar su estructura básica
 def cargar_csv(ruta):
     try:
-        # Convierte datos tabulares a una estructura manipulables
-        df = pd.read_csv(ruta, encoding="utf-8-sig")
+        # Intentamos leer con encodings comunes en archivos exportados
+        ultimo_error = None
+        for encoding in ("utf-8-sig", "utf-8", "latin1", "cp1252"):
+            try:
+                df = pd.read_csv(ruta, encoding=encoding)
+                break
+            except UnicodeDecodeError as e:
+                ultimo_error = e
+        else:
+            raise ultimo_error
 
-        # Cuantos datos fueron cargados
-        total = len(df)
+        # Limpiamos espacios en nombres de columnas
+        df.columns = df.columns.str.strip()
 
-        # Mostramos cuantos datos registro el archivo csv
-        print(f"Cargando {total} registros")
-
-
-        # Esta linea es solo para ver que las columnas del csv se vean ->
-        # print(df.columns.tolist())
-
-        # Lista de columnas
         columnas_criticas = ["Authors", "Title", "Year", "Cited by", "Affiliations"]
-        columnas_opcionales = ["DOI"]
+        columnas_apa = ["Source title", "Volume", "Issue", "DOI"]
+        columnas_opcionales = ["Page start", "Page end", "Art. No."]
 
-        # Creamos memoria para las columnas faltantes
-        columnas_faltantes = []
+        faltantes_criticas = [c for c in columnas_criticas if c not in df.columns]
+        faltantes_apa = [c for c in columnas_apa if c not in df.columns]
+        faltantes_opcionales = [c for c in columnas_opcionales if c not in df.columns]
 
-        for columna in columnas_criticas:
-            if columna not in df.columns:
-                #Agregamos al array las columnas que faltaron
-                columnas_faltantes.append(columna)
+        # Obtenemos las métricas que quedarán incompletas según las columnas faltantes
+        todas_las_faltantes = faltantes_criticas + faltantes_apa
+        metricas_incompletas = metricas_afectadas(todas_las_faltantes)
 
-        # Si hubo columnas faltantes indicarlo
-        if len(columnas_faltantes) > 0:
-            print(f"Faltaron las siguientes columnas: {columnas_faltantes}")
-            return None
+        archivo_vacio = df.empty
+        ok = len(faltantes_criticas) == 0 and not archivo_vacio
 
-        for columna in columnas_opcionales:
-            if columna not in df.columns:
-                print(f"Faltaron las siguientes columna: {columna}")
+        return {
+            "ok": ok,
+            "dataframe": df,
+            "total_registros": len(df),
+            "faltantes_criticas": faltantes_criticas,
+            "faltantes_apa": faltantes_apa,
+            "faltantes_opcionales": faltantes_opcionales,
+            "metricas_incompletas": metricas_incompletas,
+            "archivo_vacio": archivo_vacio,
+            "mensaje": "Archivo cargado correctamente" if ok else "El archivo está vacío o no cumple con las columnas críticas requeridas",
+            "preview": df.head().to_dict(orient="records")
+        }
 
-        #Imprimir las primeras 5 Filas, por ahora se muestran en terminal
-        print(df.head())
-
-        # Regresamos el archivo
-        return df
-
-    # En caso de no encontrar un archivo mandamos una advertencia
     except FileNotFoundError:
-        print("El archivo no existe")
+        return {"ok": False, "error": "El archivo no existe"}
+    except EmptyDataError:
+        return {"ok": False, "error": "El archivo está vacío"}
     except Exception as e:
-        print(f"Ocurrió un error: {e}")
-
-
-resultado = cargar_csv("scopus.csv")
-
+        return {"ok": False, "error": str(e)}

@@ -1,14 +1,14 @@
 # Función que regresa las estadísticas del mayor número de autores que un artículo tuvo entre todos los demas
 def num_maximo_autores(df):
     # Verificamos que se encuentra información la columna de Autores
-    if df is None: return 0
-    if 'Authors' not in df.columns: return 0
+    if df is None: return -1
+    if 'Authors' not in df.columns: return -1
 
     # Limpiamos las celdas vacías de la columna de Autores
     documentos = df['Authors'].dropna()
 
     # Verificamos que después de evitar celdas vacías aun queden celdas validas con autores
-    if(documentos.empty): return 0 
+    if(documentos.empty): return -1 
     
     max_autores = 0 # Establecemos el maximo como 0 para obligar la entrada del primer número de autores
     

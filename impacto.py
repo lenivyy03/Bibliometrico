@@ -34,10 +34,10 @@ def construir_referencia_apa(row):
     pagina_final = str(row.get("Page end", "")).strip()
     numero_articulo = str(row.get("Art. No.", "")).strip()
 
-    # En caso de tener paginas
+    # En caso de tener páginas
     if pagina_inicio and pagina_final:
         paginas_o_articulo = f"{pagina_inicio}-{pagina_final}"
-    # En caso de ser un articulo
+    # En caso de ser un artículo
     elif numero_articulo:
         paginas_o_articulo = f"Art. {numero_articulo}"
     # En caso de no tener ninguno

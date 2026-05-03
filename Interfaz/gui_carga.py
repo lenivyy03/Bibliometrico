@@ -248,6 +248,10 @@ class VistaCarga(tk.Frame):
         self._limpiar_preview()
 
         if not resultado.get("ok"):
+            self.app.df = None
+            self.app.deshabilitar_navegacion()
+            self.app.actualizar_estado("Sin archivo cargado", 0)
+
             error = resultado.get("error") or resultado.get("mensaje", "No se pudo cargar el archivo.")
             faltantes = resultado.get("faltantes_criticas", [])
             if faltantes:

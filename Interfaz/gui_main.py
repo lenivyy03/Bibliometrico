@@ -7,6 +7,7 @@ from gui_carga import VistaCarga
 from gui_autoria import VistaProductividad, VistaEstadisticasAutoria, VistaTopAutores
 from gui_geografia import VistaPaises, VistaUniversidades
 from gui_impacto import VistaTrabajosCitados, VistaPromedioCitas, VistaTop10Trabajos
+from gui_proyectos import VistaProyectos
 
 BG_APP = "#f5f5f5"
 SIDEBAR = "#1e1e2e"
@@ -57,7 +58,7 @@ class AppBibliometrico(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("BIBLIOMÉTRICO")
-        self.geometry("1100x680")
+        self.geometry("1280x720")
         self.resizable(False, False)
         self.configure(bg=BG_APP)
 
@@ -111,6 +112,7 @@ class AppBibliometrico(tk.Tk):
         tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=("Segoe UI", 10)).pack(anchor="w", padx=18, pady=(0, 16))
 
         secciones = [
+            ("PROYECTOS", [("gestion_proyectos", "Gestion de proyectos")]),
             ("ARCHIVO", [("carga", "Cargar CSV")]),
             ("PRODUCTIVIDAD", [("productividad", "Métricas generales"), ("autoria", "Estadísticas de autoría"), ("top_autores", "Top 10 autores")]),
             ("GEOGRAFÍA", [("paises", "Lista de países"), ("universidades", "Universidades")]),
@@ -142,6 +144,7 @@ class AppBibliometrico(tk.Tk):
 
     def _crear_contenido(self) -> None:
         vistas = {
+            "gestion_proyectos": VistaProyectos(self.content, self),
             "bienvenida": VistaBienvenida(self.content, self),
             "carga": VistaCarga(self.content, self),
             "productividad": VistaProductividad(self.content, self),
@@ -166,8 +169,10 @@ class AppBibliometrico(tk.Tk):
         self.lbl_registros.pack(side="right", padx=16, pady=8)
 
     def cambiar_vista(self, nombre_vista: str) -> None:
-        if nombre_vista != "carga" and nombre_vista != "bienvenida" and not self.archivo_cargado:
+        vistas_siempre_activas = ["carga", "bienvenida", "gestion_proyectos"]
+        if nombre_vista not in vistas_siempre_activas and not self.archivo_cargado:
             return
+
         vista = self.vistas[nombre_vista]
         vista.tkraise()
         self.current_view = nombre_vista
@@ -201,8 +206,8 @@ class AppBibliometrico(tk.Tk):
 
     def deshabilitar_navegacion(self) -> None:
         for nombre, boton in self.nav_buttons.items():
-            if nombre == "carga":
-                boton.configure(state="normal")
+            if nombre in ["carga", "gestion_proyectos"]:
+                boton.configure(state="normal", bg=SIDEBAR, fg=SIDEBAR_TEXT)
             else:
                 boton.configure(state="disabled", bg=SIDEBAR, fg="#6b7280")
 

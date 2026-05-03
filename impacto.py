@@ -1,27 +1,9 @@
 import pandas as pd
 
-# Funcion para generar una lista con los trabajos mas citados
-def trabajos_mas_citados(df):
-    # Hacemos una copia del dataframe
-    copia = df.copy()
 
-    # Convertimos los valores a numeros
-    copia["Cited by"] = pd.to_numeric(copia["Cited by"], errors="coerce").fillna(0)
+# ─── Referencias APA ──────────────────────────────────────────────────────────
 
-    # Ordenamos la columna de mayor a menor
-    copia = copia.sort_values(by=["Cited by"], ascending=False)
-
-    lista_mas_citados = []
-
-    for index, row in copia.iterrows():
-        referencia = construir_referencia_apa(row)
-        citas = int(row["Cited by"])
-        lista_mas_citados.append([referencia, citas])
-
-    return lista_mas_citados
-
-
-# Funcion para construir referencias apa
+# Función para construir referencias en formato APA a partir de una fila del DataFrame
 def construir_referencia_apa(row):
     autores = str(row.get("Authors", "")).strip()
     ano = str(row.get("Year", "")).strip()
@@ -37,7 +19,7 @@ def construir_referencia_apa(row):
     # En caso de tener páginas
     if pagina_inicio and pagina_final:
         paginas_o_articulo = f"{pagina_inicio}-{pagina_final}"
-    # En caso de ser un artículo
+    # En caso de ser un artículo con número
     elif numero_articulo:
         paginas_o_articulo = f"Art. {numero_articulo}"
     # En caso de no tener ninguno
@@ -46,7 +28,6 @@ def construir_referencia_apa(row):
 
     referencia = f"{autores} ({ano}). {titulo}."
 
-    # Checa que las columnas apas esten disponibles para usarse.
     if revista:
         referencia += f" {revista}"
     if volumen and issue:
@@ -56,7 +37,6 @@ def construir_referencia_apa(row):
     elif issue:
         referencia += f", ({issue})"
 
-    # Para mejor redacción
     if paginas_o_articulo:
         referencia += f", {paginas_o_articulo}"
 
@@ -67,3 +47,45 @@ def construir_referencia_apa(row):
 
     return referencia
 
+
+# ─── Trabajos más citados (HU 24) ─────────────────────────────────────────────
+
+# Función para generar una lista con los trabajos más citados, ordenada de mayor a menor
+def trabajos_mas_citados(df):
+    copia = df.copy()
+    copia["Cited by"] = pd.to_numeric(copia["Cited by"], errors="coerce").fillna(0)
+    copia = copia.sort_values(by=["Cited by"], ascending=False)
+
+    lista_mas_citados = []
+    for _, row in copia.iterrows():
+        referencia = construir_referencia_apa(row)
+        citas = int(row["Cited by"])
+        lista_mas_citados.append([referencia, citas])
+
+    return lista_mas_citados
+
+
+# ─── Promedio de citas anual (HU 29, 30, 31) ──────────────────────────────────
+
+# Función que calcula el promedio de citas anual de cada publicación
+def calcular_promedio_citas_anual(df, año_actual=None):
+    if año_actual is None:
+        año_actual = df['Year'].max()
+
+    df['Cited by'] = df['Cited by'].fillna(0)
+    df['Antiguedad'] = año_actual - df['Year'] + 1
+    df['Promedio_Citas_Anual'] = df['Cited by'] / df['Antiguedad']
+    df['Promedio_Citas_Anual'] = df['Promedio_Citas_Anual'].round(2)
+
+    return df
+
+
+# Función que ordena las publicaciones por promedio de citas anual de mayor a menor
+def ordenar_por_promedio_citas(df):
+    if 'Promedio_Citas_Anual' not in df.columns:
+        df = calcular_promedio_citas_anual(df)
+
+    df_ordenado = df.sort_values(by='Promedio_Citas_Anual', ascending=False)
+    columnas_vista = ['Title', 'Year', 'Promedio_Citas_Anual']
+
+    return df_ordenado[columnas_vista]

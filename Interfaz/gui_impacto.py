@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 
+from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
 impacto_mod = load_project_module("impacto")
@@ -63,12 +64,12 @@ class _BaseImpacto(tk.Frame):
         head = tk.Frame(self, bg=BG)
         head.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 10))
         head.grid_columnconfigure(0, weight=1)
-        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=("Segoe UI", 20, "bold")).grid(row=0, column=0, sticky="w")
-        self.btn_actualizar = tk.Button(head, text="Actualizar", bg="#ede9fe", fg=ACCENT, relief="flat", cursor="hand2", font=("Segoe UI", 10, "bold"), padx=14, pady=8)
+        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, "bold")).grid(row=0, column=0, sticky="w")
+        self.btn_actualizar = ColorButton(head, text="Actualizar", bg="#ede9fe", fg=ACCENT, relief="flat", cursor="hand2", font=(FONT_FAMILY, 10, "bold"), padx=14, pady=8)
         self.btn_actualizar.grid(row=0, column=1, sticky="e")
-        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=("Segoe UI", 10))
+        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
         self.status_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
-        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=("Segoe UI", 10), wraplength=780, justify="left")
+        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, 10), wraplength=780, justify="left")
         self.error_label.grid(row=2, column=0, columnspan=2, sticky="w")
 
     def _set_status(self, texto: str = ""):
@@ -97,7 +98,7 @@ class VistaTrabajosCitados(_BaseImpacto):
         filtro = tk.Frame(self, bg=BG)
         filtro.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 10))
         filtro.grid_columnconfigure(1, weight=1)
-        tk.Label(filtro, text="Buscar referencia:", bg=BG, fg=TEXT, font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(filtro, text="Buscar referencia:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
@@ -105,7 +106,7 @@ class VistaTrabajosCitados(_BaseImpacto):
         self.scrollable = ScrollableCanvas(self, bg=BG)
         self.scrollable.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 8))
 
-        self.copy_label = tk.Label(self, text="", bg=BG, fg=ACCENT, font=("Segoe UI", 10, "bold"))
+        self.copy_label = tk.Label(self, text="", bg=BG, fg=ACCENT, font=(FONT_FAMILY, 10, "bold"))
         self.copy_label.grid(row=3, column=0, sticky="w", padx=24, pady=(0, 24))
 
     def cargar_datos(self) -> None:
@@ -143,9 +144,9 @@ class VistaTrabajosCitados(_BaseImpacto):
     def _agregar_item(self, indice: int, referencia: str, citas: int) -> None:
         card = tk.Frame(self.scrollable.inner, bg=CARD, highlightbackground=BORDER, highlightthickness=1, cursor="hand2")
         card.pack(fill="x", pady=6)
-        titulo = tk.Label(card, text=f"{indice}. {citas} citas", bg=CARD, fg=TEXT, font=("Segoe UI", 11, "bold"), anchor="w", cursor="hand2")
+        titulo = tk.Label(card, text=f"{indice}. {citas} citas", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 11, "bold"), anchor="w", cursor="hand2")
         titulo.pack(fill="x", padx=16, pady=(12, 4))
-        detalle = tk.Label(card, text=referencia, bg=CARD, fg=TEXT, justify="left", wraplength=760, anchor="w", cursor="hand2", font=("Segoe UI", 10))
+        detalle = tk.Label(card, text=referencia, bg=CARD, fg=TEXT, justify="left", wraplength=760, anchor="w", cursor="hand2", font=(FONT_FAMILY, 10))
         detalle.pack(fill="x", padx=16, pady=(0, 12))
 
         for widget in (card, titulo, detalle):
@@ -174,7 +175,7 @@ class VistaPromedioCitas(_BaseImpacto):
         filtro = tk.Frame(self, bg=BG)
         filtro.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 10))
         filtro.grid_columnconfigure(1, weight=1)
-        tk.Label(filtro, text="Filtrar por título:", bg=BG, fg=TEXT, font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(filtro, text="Filtrar por título:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
@@ -199,7 +200,7 @@ class VistaPromedioCitas(_BaseImpacto):
         self.tree.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
 
-        self.resumen = tk.Label(self, text="", bg=BG, fg=MUTED, justify="left", anchor="w", font=("Segoe UI", 10))
+        self.resumen = tk.Label(self, text="", bg=BG, fg=MUTED, justify="left", anchor="w", font=(FONT_FAMILY, 10))
         self.resumen.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 24))
 
     def cargar_datos(self) -> None:
@@ -275,8 +276,8 @@ class VistaTop10Trabajos(_BaseImpacto):
 
         acciones = tk.Frame(self, bg=BG)
         acciones.grid(row=1, column=0, sticky="w", padx=24, pady=(0, 10))
-        tk.Button(acciones, text="Exportar a Word", command=lambda: print("pendiente"), bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left")
-        tk.Button(acciones, text="Exportar a Excel", command=lambda: print("pendiente"), bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left", padx=(8, 0))
+        ColorButton(acciones, text="Exportar a Word", command=lambda: print("pendiente"), bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left")
+        ColorButton(acciones, text="Exportar a Excel", command=lambda: print("pendiente"), bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left", padx=(8, 0))
 
         self.scrollable = ScrollableCanvas(self, bg=BG)
         self.scrollable.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 24))
@@ -310,18 +311,18 @@ class VistaTop10Trabajos(_BaseImpacto):
 
         cabecera = tk.Frame(card, bg=CARD)
         cabecera.pack(fill="x", padx=16, pady=(12, 8))
-        tk.Label(cabecera, text=f"#{indice}", bg="#ede9fe", fg=ACCENT, font=("Segoe UI", 11, "bold"), width=4).pack(side="left")
-        tk.Label(cabecera, text=f"{citas} citas", bg=CARD, fg=TEXT, font=("Segoe UI", 11, "bold")).pack(side="left", padx=(10, 12))
-        tk.Label(cabecera, text=f"Año: {anio}", bg=CARD, fg=MUTED, font=("Segoe UI", 10, "bold")).pack(side="left")
+        tk.Label(cabecera, text=f"#{indice}", bg="#ede9fe", fg=ACCENT, font=(FONT_FAMILY, 11, "bold"), width=4).pack(side="left")
+        tk.Label(cabecera, text=f"{citas} citas", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 11, "bold")).pack(side="left", padx=(10, 12))
+        tk.Label(cabecera, text=f"Año: {anio}", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10, "bold")).pack(side="left")
 
-        tk.Label(card, text=referencia, bg=CARD, fg=TEXT, justify="left", anchor="w", wraplength=760, font=("Segoe UI", 10)).pack(fill="x", padx=16, pady=(0, 12))
+        tk.Label(card, text=referencia, bg=CARD, fg=TEXT, justify="left", anchor="w", wraplength=760, font=(FONT_FAMILY, 10)).pack(fill="x", padx=16, pady=(0, 12))
 
         if doi and str(doi).strip().lower() != "sin doi":
-            enlace = tk.Label(card, text=f"https://doi.org/{doi}", bg=CARD, fg=LINK, cursor="hand2", font=("Segoe UI", 10, "underline"))
+            enlace = tk.Label(card, text=f"https://doi.org/{doi}", bg=CARD, fg=LINK, cursor="hand2", font=(FONT_FAMILY, 10, "underline"))
             enlace.pack(anchor="w", padx=16, pady=(0, 12))
             enlace.bind("<Button-1>", lambda _e, value=doi: webbrowser.open(f"https://doi.org/{value}"))
         else:
-            tk.Label(card, text="Sin DOI", bg=CARD, fg="#9ca3af", font=("Segoe UI", 10)).pack(anchor="w", padx=16, pady=(0, 12))
+            tk.Label(card, text="Sin DOI", bg=CARD, fg="#9ca3af", font=(FONT_FAMILY, 10)).pack(anchor="w", padx=16, pady=(0, 12))
 
     def on_show(self) -> None:
         if self.app.df is not None:

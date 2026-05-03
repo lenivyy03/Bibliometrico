@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
 paises_mod = load_project_module("lista_paises")
@@ -33,8 +34,8 @@ class _BaseVistaGeo(tk.Frame):
         head = tk.Frame(self, bg=BG)
         head.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 10))
         head.grid_columnconfigure(0, weight=1)
-        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=("Segoe UI", 20, "bold")).grid(row=0, column=0, sticky="w")
-        self.btn_actualizar = tk.Button(
+        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, "bold")).grid(row=0, column=0, sticky="w")
+        self.btn_actualizar = ColorButton(
             head,
             text="Actualizar",
             bg="#ede9fe",
@@ -42,14 +43,14 @@ class _BaseVistaGeo(tk.Frame):
             relief="flat",
             activebackground="#ddd6fe",
             cursor="hand2",
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             padx=14,
             pady=8,
         )
         self.btn_actualizar.grid(row=0, column=1, sticky="e")
-        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=("Segoe UI", 10))
+        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
         self.status_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
-        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=("Segoe UI", 10), wraplength=780, justify="left")
+        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, 10), wraplength=780, justify="left")
         self.error_label.grid(row=2, column=0, columnspan=2, sticky="w")
 
     def _set_status(self, texto: str = "") -> None:
@@ -74,15 +75,15 @@ class VistaPaises(_BaseVistaGeo):
         resumen = tk.Frame(self, bg=BG)
         resumen.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 10))
         resumen.grid_columnconfigure(1, weight=1)
-        self.lbl_total_paises = tk.Label(resumen, text="Países únicos: —", bg=BG, fg=TEXT, font=("Segoe UI", 10, "bold"))
+        self.lbl_total_paises = tk.Label(resumen, text="Países únicos: —", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold"))
         self.lbl_total_paises.grid(row=0, column=0, sticky="w")
-        self.lbl_total_articulos = tk.Label(resumen, text="Artículos con afiliación: —", bg=BG, fg=MUTED, font=("Segoe UI", 10))
+        self.lbl_total_articulos = tk.Label(resumen, text="Artículos con afiliación: —", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
         self.lbl_total_articulos.grid(row=0, column=1, sticky="w", padx=(20, 0))
 
         filtro = tk.Frame(self, bg=BG)
         filtro.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 10))
         filtro.grid_columnconfigure(1, weight=1)
-        tk.Label(filtro, text="Buscar país:", bg=BG, fg=TEXT, font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(filtro, text="Buscar país:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
@@ -104,7 +105,7 @@ class VistaPaises(_BaseVistaGeo):
         self.tree.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
 
-        self.porcentaje_label = tk.Label(self, text="", bg=BG, fg=MUTED, font=("Segoe UI", 10))
+        self.porcentaje_label = tk.Label(self, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
         self.porcentaje_label.grid(row=4, column=0, sticky="w", padx=24, pady=(0, 24))
 
     def cargar_datos(self) -> None:
@@ -198,8 +199,8 @@ class VistaUniversidades(_BaseVistaGeo):
         detalle_card.grid(row=0, column=1, sticky="nsew", pady=10)
         detalle_card.grid_rowconfigure(1, weight=1)
         detalle_card.grid_columnconfigure(0, weight=1)
-        tk.Label(detalle_card, text="Artículos de la universidad seleccionada", bg=CARD, fg=TEXT, font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
-        self.listbox_titulos = tk.Listbox(detalle_card, activestyle="none", borderwidth=0, highlightthickness=0, font=("Segoe UI", 10))
+        tk.Label(detalle_card, text="Artículos de la universidad seleccionada", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 12, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
+        self.listbox_titulos = tk.Listbox(detalle_card, activestyle="none", borderwidth=0, highlightthickness=0, font=(FONT_FAMILY, 10))
         self.listbox_titulos.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
         scroll_list = ttk.Scrollbar(detalle_card, orient="vertical", command=self.listbox_titulos.yview)
         self.listbox_titulos.configure(yscrollcommand=scroll_list.set)
@@ -228,13 +229,13 @@ class VistaUniversidades(_BaseVistaGeo):
             ("Citas máx.", self.var_citas_max),
         ]
         for idx, (titulo, variable) in enumerate(campos):
-            tk.Label(filtros, text=titulo, bg=BG, fg=TEXT, font=("Segoe UI", 10, "bold")).grid(row=0, column=idx * 2, sticky="w")
+            tk.Label(filtros, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=idx * 2, sticky="w")
             tk.Entry(filtros, textvariable=variable, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=idx * 2 + 1, sticky="ew", padx=(6, 12), ipady=5)
 
         botones = tk.Frame(self.tab_top, bg=BG)
         botones.grid(row=1, column=0, sticky="nw", pady=(0, 10))
-        tk.Button(botones, text="Aplicar filtros", command=self.aplicar_filtros, bg=ACCENT, fg="white", relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left")
-        tk.Button(botones, text="Limpiar filtros", command=self.limpiar_filtros, bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left", padx=(8, 0))
+        ColorButton(botones, text="Aplicar filtros", command=self.aplicar_filtros, bg=ACCENT, fg="white", relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left")
+        ColorButton(botones, text="Limpiar filtros", command=self.limpiar_filtros, bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left", padx=(8, 0))
 
         tabla_card = tk.Frame(self.tab_top, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         tabla_card.grid(row=2, column=0, sticky="nsew")

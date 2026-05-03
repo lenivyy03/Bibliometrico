@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from gui_utils import FONT_FAMILY, ColorButton
 from gui_carga import VistaCarga
 from gui_autoria import VistaProductividad, VistaEstadisticasAutoria, VistaTopAutores
 from gui_geografia import VistaPaises, VistaUniversidades
@@ -31,15 +32,15 @@ class VistaBienvenida(tk.Frame):
         caja = tk.Frame(self, bg=BG_APP)
         caja.grid(row=0, column=0)
 
-        tk.Label(caja, text="BIBLIOMÉTRICO", bg=BG_APP, fg=TEXT, font=("Segoe UI", 28, "bold")).pack(pady=(0, 12))
+        tk.Label(caja, text="BIBLIOMÉTRICO", bg=BG_APP, fg=TEXT, font=(FONT_FAMILY, 28, "bold")).pack(pady=(0, 12))
         tk.Label(
             caja,
             text="Carga un archivo CSV de Scopus o Web of Science para comenzar",
             bg=BG_APP,
             fg=MUTED,
-            font=("Segoe UI", 12),
+            font=(FONT_FAMILY, 12),
         ).pack(pady=(0, 24))
-        tk.Button(
+        ColorButton(
             caja,
             text="Cargar archivo CSV",
             command=lambda: self.app.cambiar_vista("carga"),
@@ -48,7 +49,7 @@ class VistaBienvenida(tk.Frame):
             relief="flat",
             activebackground="#6d28d9",
             cursor="hand2",
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT_FAMILY, 12, "bold"),
             padx=24,
             pady=12,
         ).pack()
@@ -84,9 +85,9 @@ class AppBibliometrico(tk.Tk):
             estilo.theme_use("clam")
         except tk.TclError:
             pass
-        estilo.configure("Treeview", font=("Segoe UI", 10), rowheight=28)
-        estilo.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
-        estilo.configure("TNotebook.Tab", padding=(12, 6), font=("Segoe UI", 10, "bold"))
+        estilo.configure("Treeview", font=(FONT_FAMILY, 10), rowheight=28)
+        estilo.configure("Treeview.Heading", font=(FONT_FAMILY, 10, "bold"))
+        estilo.configure("TNotebook.Tab", padding=(12, 6), font=(FONT_FAMILY, 10, "bold"))
 
     def _crear_layout(self) -> None:
         self.body = tk.Frame(self, bg=BG_APP)
@@ -108,8 +109,8 @@ class AppBibliometrico(tk.Tk):
         self.content.grid_columnconfigure(0, weight=1)
 
     def _crear_sidebar(self) -> None:
-        tk.Label(self.sidebar, text="BIBLIOMÉTRICO", bg=SIDEBAR, fg="white", font=("Segoe UI", 16, "bold")).pack(anchor="w", padx=18, pady=(18, 6))
-        tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=("Segoe UI", 10)).pack(anchor="w", padx=18, pady=(0, 16))
+        tk.Label(self.sidebar, text="BIBLIOMÉTRICO", bg=SIDEBAR, fg="white", font=(FONT_FAMILY, 16, "bold")).pack(anchor="w", padx=18, pady=(18, 6))
+        tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 10)).pack(anchor="w", padx=18, pady=(0, 16))
 
         secciones = [
             ("PROYECTOS", [("gestion_proyectos", "Gestion de proyectos")]),
@@ -120,9 +121,9 @@ class AppBibliometrico(tk.Tk):
         ]
 
         for titulo, botones in secciones:
-            tk.Label(self.sidebar, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=18, pady=(10, 6))
+            tk.Label(self.sidebar, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(10, 6))
             for nombre, texto in botones:
-                boton = tk.Button(
+                boton = ColorButton(
                     self.sidebar,
                     text=texto,
                     command=lambda n=nombre: self.cambiar_vista(n),
@@ -135,7 +136,7 @@ class AppBibliometrico(tk.Tk):
                     cursor="hand2",
                     padx=18,
                     pady=10,
-                    font=("Segoe UI", 10),
+                    font=(FONT_FAMILY, 10),
                     disabledforeground="#6b7280",
                     borderwidth=0,
                 )
@@ -163,9 +164,9 @@ class AppBibliometrico(tk.Tk):
     def _crear_barra_estado(self) -> None:
         barra = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         barra.pack(fill="x", side="bottom")
-        self.lbl_archivo = tk.Label(barra, text="Sin archivo cargado", bg=CARD, fg=MUTED, font=("Segoe UI", 10))
+        self.lbl_archivo = tk.Label(barra, text="Sin archivo cargado", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10))
         self.lbl_archivo.pack(side="left", padx=16, pady=8)
-        self.lbl_registros = tk.Label(barra, text="0 registros", bg=CARD, fg=MUTED, font=("Segoe UI", 10, "bold"))
+        self.lbl_registros = tk.Label(barra, text="0 registros", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10, "bold"))
         self.lbl_registros.pack(side="right", padx=16, pady=8)
 
     def cambiar_vista(self, nombre_vista: str) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
 conteo_mod = load_project_module("conteo")
@@ -31,9 +32,9 @@ class TarjetaMetrica(tk.Frame):
     def __init__(self, parent: tk.Widget, titulo: str):
         super().__init__(parent, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         self.grid_columnconfigure(0, weight=1)
-        self.valor = tk.Label(self, text="—", bg=CARD, fg=TEXT, font=("Segoe UI", 24, "bold"))
+        self.valor = tk.Label(self, text="—", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 24, "bold"))
         self.valor.grid(row=0, column=0, padx=18, pady=(14, 2))
-        self.titulo = tk.Label(self, text=titulo, bg=CARD, fg=MUTED, font=("Segoe UI", 10))
+        self.titulo = tk.Label(self, text=titulo, bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10))
         self.titulo.grid(row=1, column=0, padx=18, pady=(0, 14))
 
     def actualizar(self, valor: str) -> None:
@@ -52,8 +53,8 @@ class _BaseVistaDatos(tk.Frame):
         head = tk.Frame(self, bg=BG)
         head.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 10))
         head.grid_columnconfigure(0, weight=1)
-        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=("Segoe UI", 20, "bold")).grid(row=0, column=0, sticky="w")
-        self.btn_actualizar = tk.Button(
+        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, "bold")).grid(row=0, column=0, sticky="w")
+        self.btn_actualizar = ColorButton(
             head,
             text="Actualizar",
             bg="#ede9fe",
@@ -61,16 +62,16 @@ class _BaseVistaDatos(tk.Frame):
             relief="flat",
             activebackground="#ddd6fe",
             cursor="hand2",
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             padx=14,
             pady=8,
         )
         self.btn_actualizar.grid(row=0, column=1, sticky="e")
 
-        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=("Segoe UI", 10))
+        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
         self.status_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
-        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=("Segoe UI", 10), wraplength=780, justify="left")
+        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, 10), wraplength=780, justify="left")
         self.error_label.grid(row=2, column=0, columnspan=2, sticky="w")
 
     def _set_status(self, texto: str = "") -> None:
@@ -108,7 +109,7 @@ class VistaProductividad(_BaseVistaDatos):
             text="Resumen consolidado de productividad para el archivo cargado.",
             bg=BG,
             fg=MUTED,
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
         )
         info.grid(row=2, column=0, sticky="nw", padx=24, pady=(8, 0))
 
@@ -164,7 +165,7 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
         filtro = tk.Frame(cuerpo, bg=BG)
         filtro.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         filtro.grid_columnconfigure(1, weight=1)
-        tk.Label(filtro, text="Buscar institución:", bg=BG, fg=TEXT, font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(filtro, text="Buscar institución:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
@@ -316,12 +317,12 @@ class VistaTopAutores(_BaseVistaDatos):
         card.pack(fill="x", pady=6)
         card.grid_columnconfigure(1, weight=1)
 
-        tk.Label(card, text=f"{posicion:02}", bg="#ede9fe", fg=ACCENT, font=("Segoe UI", 11, "bold"), width=4).grid(row=0, column=0, padx=12, pady=12)
+        tk.Label(card, text=f"{posicion:02}", bg="#ede9fe", fg=ACCENT, font=(FONT_FAMILY, 11, "bold"), width=4).grid(row=0, column=0, padx=12, pady=12)
         info = tk.Frame(card, bg=CARD)
         info.grid(row=0, column=1, sticky="ew", pady=12)
         info.grid_columnconfigure(0, weight=1)
-        tk.Label(info, text=nombre, bg=CARD, fg=TEXT, font=("Segoe UI", 11, "bold"), anchor="w").grid(row=0, column=0, sticky="w")
-        tk.Label(info, text=f"{publicaciones} publicaciones", bg=CARD, fg=MUTED, font=("Segoe UI", 10)).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        tk.Label(info, text=nombre, bg=CARD, fg=TEXT, font=(FONT_FAMILY, 11, "bold"), anchor="w").grid(row=0, column=0, sticky="w")
+        tk.Label(info, text=f"{publicaciones} publicaciones", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10)).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
         detalle = tk.Frame(card, bg="#fafafa")
         detalle.grid(row=1, column=0, columnspan=3, sticky="ew", padx=12, pady=(0, 12))
@@ -335,10 +336,10 @@ class VistaTopAutores(_BaseVistaDatos):
                 anchor="w",
                 justify="left",
                 wraplength=720,
-                font=("Segoe UI", 10),
+                font=(FONT_FAMILY, 10),
             ).pack(fill="x", pady=2)
 
-        boton = tk.Button(
+        boton = ColorButton(
             card,
             text="Mostrar títulos",
             bg="#f3f4f6",

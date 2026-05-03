@@ -4,6 +4,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog, ttk
 
+from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
 carga_mod = load_project_module("carga")
@@ -48,7 +49,7 @@ class VistaCarga(tk.Frame):
             text="Cargar archivo CSV",
             bg=BG,
             fg=TEXT,
-            font=("Segoe UI", 20, "bold"),
+            font=(FONT_FAMILY, 20, "bold"),
         ).grid(row=0, column=0, sticky="w")
 
         tk.Label(
@@ -56,7 +57,7 @@ class VistaCarga(tk.Frame):
             text="Importa un archivo exportado desde Scopus para habilitar el análisis.",
             bg=BG,
             fg=MUTED,
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
     def _crear_formulario(self) -> None:
@@ -69,7 +70,7 @@ class VistaCarga(tk.Frame):
             text="Ruta del archivo",
             bg=CARD,
             fg=TEXT,
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
         ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
 
         fila = tk.Frame(formulario, bg=CARD)
@@ -83,11 +84,11 @@ class VistaCarga(tk.Frame):
             relief="solid",
             bd=1,
             highlightthickness=0,
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
         )
         self.entry_ruta.grid(row=0, column=0, sticky="ew", ipady=6)
 
-        tk.Button(
+        ColorButton(
             fila,
             text="Examinar",
             command=self.examinar_archivo,
@@ -96,7 +97,7 @@ class VistaCarga(tk.Frame):
             relief="flat",
             activebackground="#ddd6fe",
             cursor="hand2",
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             padx=14,
             pady=6,
         ).grid(row=0, column=1, padx=(10, 0))
@@ -104,7 +105,7 @@ class VistaCarga(tk.Frame):
         acciones = tk.Frame(formulario, bg=CARD)
         acciones.grid(row=2, column=0, sticky="w", padx=16, pady=16)
 
-        tk.Button(
+        ColorButton(
             acciones,
             text="Cargar",
             command=self.ejecutar_carga,
@@ -113,12 +114,12 @@ class VistaCarga(tk.Frame):
             relief="flat",
             activebackground="#6d28d9",
             cursor="hand2",
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             padx=18,
             pady=8,
         ).pack(side="left")
 
-        tk.Button(
+        ColorButton(
             acciones,
             text="Limpiar",
             command=self.limpiar,
@@ -127,7 +128,7 @@ class VistaCarga(tk.Frame):
             relief="flat",
             activebackground="#e5e7eb",
             cursor="hand2",
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
             padx=18,
             pady=8,
         ).pack(side="left", padx=(10, 0))
@@ -144,7 +145,7 @@ class VistaCarga(tk.Frame):
             fg=TEXT,
             justify="left",
             anchor="w",
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
             wraplength=780,
         )
         self.mensaje_label.grid(row=0, column=0, sticky="ew")
@@ -155,7 +156,7 @@ class VistaCarga(tk.Frame):
         self.warning_panel.grid_columnconfigure(1, weight=1)
         self.warning_panel.grid_remove()
 
-        self.toggle_btn = tk.Button(
+        self.toggle_btn = ColorButton(
             self.warning_panel,
             text="▶ Ver detalles",
             command=self.toggle_detalles,
@@ -165,7 +166,7 @@ class VistaCarga(tk.Frame):
             activebackground=WARN_BG,
             activeforeground=WARN,
             cursor="hand2",
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY, 10, "bold"),
             padx=4,
             pady=4,
         )
@@ -176,7 +177,7 @@ class VistaCarga(tk.Frame):
             text="",
             bg=WARN_BG,
             fg=WARN,
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
             justify="left",
             anchor="w",
             wraplength=720,
@@ -194,7 +195,7 @@ class VistaCarga(tk.Frame):
             fg=WARN,
             justify="left",
             anchor="w",
-            font=("Segoe UI", 10),
+            font=(FONT_FAMILY, 10),
             wraplength=760,
         )
         self.detalles_label.pack(fill="x")
@@ -210,7 +211,7 @@ class VistaCarga(tk.Frame):
             text="Vista previa",
             bg=CARD,
             fg=TEXT,
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT_FAMILY, 12, "bold"),
         ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
 
         tabla_frame = tk.Frame(contenedor, bg=CARD)

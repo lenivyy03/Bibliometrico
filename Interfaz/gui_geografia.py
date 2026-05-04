@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import ttk
-
+from tkinter import ttk, messagebox
 from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
 paises_mod = load_project_module("tops")
 filtrado_mod = load_project_module("filtrado")
-
 extraer_paises = paises_mod.extraer_paises
 obtener_frecuencias_paises = paises_mod.obtener_frecuencias_paises
 obtener_ranking_universidades = filtrado_mod.obtener_ranking_universidades
 obtener_articulos_agrupados_por_universidad = filtrado_mod.obtener_articulos_agrupados_por_universidad
 obtener_top_10_universidades_citadas = filtrado_mod.obtener_top_10_universidades_citadas
+obtener_pais_universidades_top_10 = filtrado_mod.obtener_pais_universidades_top_10
 
 BG = "#f5f5f5"
 CARD = "#ffffff"
@@ -87,6 +86,11 @@ class VistaPaises(_BaseVistaGeo):
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        self._btn_exportar_paises = ColorButton(
+            filtro, text="Exportar ✓", command=self._toggle_exportar_paises,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_paises.grid(row=0, column=2, padx=(8, 0))
+        self.app.registrar_toggle_cb("paises", self._on_toggle_cb_paises)
 
         tabla_card = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         tabla_card.grid(row=3, column=0, sticky="nsew", padx=24, pady=(0, 10))
@@ -123,6 +127,7 @@ class VistaPaises(_BaseVistaGeo):
             self.lbl_total_paises.configure(text=f"Países únicos: {len(freqs)}")
             total_articulos = int(self.app.df["Affiliations"].dropna().shape[0]) if "Affiliations" in self.app.df.columns else 0
             self.lbl_total_articulos.configure(text=f"Artículos con afiliación: {total_articulos}")
+            self.app.export_getters["paises"] = lambda: self._tabla_completa
             self.aplicar_filtro()
             self._set_status("Datos actualizados.")
         except Exception as exc:
@@ -151,6 +156,18 @@ class VistaPaises(_BaseVistaGeo):
         porcentaje = (conteo / total) * 100
         self.porcentaje_label.configure(text=f"{pais} representa {porcentaje:.2f}% del total de afiliaciones contabilizadas.")
 
+    def _toggle_exportar_paises(self) -> None:
+        if not self._tabla_completa:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("paises")
+
+    def _on_toggle_cb_paises(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_paises.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_paises.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
+
     def on_show(self) -> None:
         if self.app.df is not None:
             self.cargar_datos()
@@ -161,6 +178,9 @@ class VistaUniversidades(_BaseVistaGeo):
         super().__init__(parent, app, "Universidades")
         self.btn_actualizar.configure(command=self.cargar_datos)
         self._articulos_por_universidad = {}
+        self._ranking = None
+        self._top = None
+        self._pais_por_universidad = {}
 
         self.notebook = ttk.Notebook(self)
         self.notebook.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 24))
@@ -194,6 +214,14 @@ class VistaUniversidades(_BaseVistaGeo):
         scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree_general.yview)
         self.tree_general.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
+
+        acciones_gen = tk.Frame(self.tab_general, bg=BG)
+        acciones_gen.grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        self._btn_exportar_ranking = ColorButton(
+            acciones_gen, text="Exportar ✓", command=self._toggle_exportar_ranking,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_ranking.pack(side="left")
+        self.app.registrar_toggle_cb("univ_lista", self._on_toggle_cb_ranking)
 
         detalle_card = tk.Frame(self.tab_general, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         detalle_card.grid(row=0, column=1, sticky="nsew", pady=10)
@@ -236,19 +264,26 @@ class VistaUniversidades(_BaseVistaGeo):
         botones.grid(row=1, column=0, sticky="nw", pady=(0, 10))
         ColorButton(botones, text="Aplicar filtros", command=self.aplicar_filtros, bg=ACCENT, fg="white", relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left")
         ColorButton(botones, text="Limpiar filtros", command=self.limpiar_filtros, bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left", padx=(8, 0))
+        self._btn_exportar_top_univ = ColorButton(
+            botones, text="Exportar ✓", command=self._toggle_exportar_top,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_top_univ.pack(side="left", padx=(8, 0))
+        self.app.registrar_toggle_cb("univ_top", self._on_toggle_cb_top_univ)
 
         tabla_card = tk.Frame(self.tab_top, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         tabla_card.grid(row=2, column=0, sticky="nsew")
         tabla_card.grid_rowconfigure(0, weight=1)
         tabla_card.grid_columnconfigure(0, weight=1)
 
-        self.tree_top = ttk.Treeview(tabla_card, columns=("Universidad_Institucion", "Numero_Articulos", "Citas_Totales"), show="headings")
+        self.tree_top = ttk.Treeview(tabla_card, columns=("Universidad_Institucion", "Numero_Articulos", "Citas_Totales", "Pais"), show="headings")
         self.tree_top.heading("Universidad_Institucion", text="Universidad")
         self.tree_top.heading("Numero_Articulos", text="Artículos")
         self.tree_top.heading("Citas_Totales", text="Citas totales")
-        self.tree_top.column("Universidad_Institucion", width=360, anchor="w")
-        self.tree_top.column("Numero_Articulos", width=120, anchor="center")
-        self.tree_top.column("Citas_Totales", width=120, anchor="center")
+        self.tree_top.heading("Pais", text="País")
+        self.tree_top.column("Universidad_Institucion", width=270, anchor="w")
+        self.tree_top.column("Numero_Articulos", width=100, anchor="center")
+        self.tree_top.column("Citas_Totales", width=100, anchor="center")
+        self.tree_top.column("Pais", width=150, anchor="w")
         self.tree_top.grid(row=0, column=0, sticky="nsew")
         scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree_top.yview)
         self.tree_top.configure(yscrollcommand=scroll.set)
@@ -264,11 +299,18 @@ class VistaUniversidades(_BaseVistaGeo):
     def _calcular_general(self) -> None:
         try:
             ranking = obtener_ranking_universidades(self.app.df)
+            self._ranking = ranking
+            pais_top = obtener_pais_universidades_top_10(self.app.df)
+            self._pais_por_universidad = {
+                str(fila["Universidad_Institucion"]): str(fila["Pais"])
+                for _, fila in pais_top.iterrows()
+            }
             agrupados = obtener_articulos_agrupados_por_universidad(self.app.df)
             self._articulos_por_universidad = {
                 str(fila["Universidad_Institucion"]): list(fila["Lista_De_Titulos"])
                 for _, fila in agrupados.iterrows()
             }
+            self.app.export_getters["univ_lista"] = lambda: self._ranking
             self.tree_general.delete(*self.tree_general.get_children())
             for _, fila in ranking.iterrows():
                 self.tree_general.insert("", "end", values=(fila["Universidad_Institucion"], fila["Numero_Articulos"]))
@@ -308,11 +350,38 @@ class VistaUniversidades(_BaseVistaGeo):
                 citas_totales_minimas=citas_min,
                 citas_totales_maximas=citas_max,
             )
+            self._top = top
+            self.app.export_getters["univ_top"] = lambda: self._top
             self.tree_top.delete(*self.tree_top.get_children())
             for _, fila in top.iterrows():
-                self.tree_top.insert("", "end", values=(fila["Universidad_Institucion"], fila["Numero_Articulos"], fila["Citas_Totales"]))
+                pais_val = self._pais_por_universidad.get(str(fila["Universidad_Institucion"]), "—")
+                self.tree_top.insert("", "end", values=(fila["Universidad_Institucion"], fila["Numero_Articulos"], fila["Citas_Totales"], pais_val))
         except Exception as exc:
             self._set_error(f"No se pudieron aplicar los filtros: {exc}")
+
+    def _toggle_exportar_ranking(self) -> None:
+        if self._ranking is None:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("univ_lista")
+
+    def _on_toggle_cb_ranking(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_ranking.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_ranking.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
+
+    def _toggle_exportar_top(self) -> None:
+        if self._top is None:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("univ_top")
+
+    def _on_toggle_cb_top_univ(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_top_univ.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_top_univ.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
 
     def limpiar_filtros(self) -> None:
         for variable in (self.var_pais, self.var_desde, self.var_hasta, self.var_citas_min, self.var_citas_max):

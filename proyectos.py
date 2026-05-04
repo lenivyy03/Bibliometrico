@@ -1,32 +1,57 @@
 import os
 import pandas as pd
 
-# La HU 55 (Crear un proyecto) es logicamente igual
-# HU 56: Guardar un proyecto
+# HU 55 / 56: Crear y guardar un proyecto
 def guardar_proyecto(df, nombre_proyecto):
-    # Creamos la carpeta si no existe
     os.makedirs("proyectos_guardados", exist_ok=True)
-    # Construímos la ruta
     ruta = os.path.join("proyectos_guardados", nombre_proyecto + ".pkl")
-    # Guardamos el DataFrame en un archivo pickle
-    df.to_pickle(ruta)
+    df_save = df.copy()
+    # Normalizar StringDtype extendido → object para evitar incompatibilidades al reabrir
+    for col in df_save.columns:
+        if df_save[col].dtype != object and pd.api.types.is_string_dtype(df_save[col]):
+            try:
+                df_save[col] = df_save[col].astype(object)
+            except Exception:
+                pass
+    df_save.to_pickle(ruta)
 
 # HU 57: Abrir un proyecto guardado
 def abrir_proyecto(nombre_proyecto):
-    # Construímos la ruta
+    import pickle
     ruta = os.path.join("proyectos_guardados", nombre_proyecto + ".pkl")
-    # Abrimos el archivo pickle del DataFrame
-    df = pd.read_pickle(ruta)
+    try:
+        df = pd.read_pickle(ruta)
+    except Exception:
+        # Fallback: pickle directo para archivos guardados con pandas anterior
+        with open(ruta, "rb") as f:
+            df = pickle.load(f)
+    # Normalizar StringDtype → object
+    for col in df.columns:
+        if df[col].dtype != object and pd.api.types.is_string_dtype(df[col]):
+            try:
+                df[col] = df[col].astype(object)
+            except Exception:
+                df[col] = df[col].astype(str)
     return df
 
 # HU 58: Lista de proyectos existentes al iniciar la aplicación
+# HU 60: Fecha de última modificación
 def listar_proyectos():
-    # Si no hay proyectos, devolver lista vacía
     if not os.path.exists('proyectos_guardados'):
         return []
+    from datetime import datetime
+    resultado = []
+    for archivo in os.listdir("proyectos_guardados"):
+        if archivo.endswith(".pkl"):
+            ruta = os.path.join("proyectos_guardados", archivo)
+            nombre = archivo.removesuffix(".pkl")
+            fecha = datetime.fromtimestamp(os.path.getmtime(ruta)).strftime("%Y-%m-%d %H:%M")
+            resultado.append((nombre, fecha))
+    resultado.sort(key=lambda x: x[1], reverse=True)
+    return resultado
 
-    # Lista con los nombres crudos de todos los proyectos
-    archivos = os.listdir("proyectos_guardados")
-    # Lista con los nombres limpios de todos los proyectos
-    nombres_proyectos = [nombre.removesuffix(".pkl")  for nombre in archivos]
-    return nombres_proyectos
+# HU 59: Eliminar un proyecto
+def eliminar_proyecto(nombre_proyecto):
+    ruta = os.path.join("proyectos_guardados", nombre_proyecto + ".pkl")
+    if os.path.exists(ruta):
+        os.remove(ruta)

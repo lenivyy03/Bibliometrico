@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from compat_imports import load_project_module
 
 proyectos_mod = load_project_module('proyectos')
 guardar_proyecto = proyectos_mod.guardar_proyecto
 abrir_proyecto = proyectos_mod.abrir_proyecto
 listar_proyectos = proyectos_mod.listar_proyectos
+eliminar_proyecto = proyectos_mod.eliminar_proyecto
 
 BG = '#f5f5f5'
 CARD = '#ffffff'
@@ -52,9 +53,11 @@ class VistaProyectos(tk.Frame):
         head.grid(row=0, column=0, sticky='ew', padx=16, pady=16)
         tk.Label(head, text='Proyectos guardados', bg=CARD, fg=TEXT, font=('Segoe UI', 12, 'bold')).pack(side='left')
         tk.Button(head, text='Actualizar lista', command=self.cargar_lista, bg='#f3f4f6', fg=TEXT, relief='flat', cursor='hand2', padx=12, pady=4).pack(side='right')
-        self.tree = ttk.Treeview(card, columns=('Nombre',), show='headings')
+        self.tree = ttk.Treeview(card, columns=('Nombre', 'Fecha'), show='headings')
         self.tree.heading('Nombre', text='Nombre del proyecto')
-        self.tree.column('Nombre', width=400, anchor='w')
+        self.tree.heading('Fecha', text='Última modificación')
+        self.tree.column('Nombre', width=300, anchor='w')
+        self.tree.column('Fecha', width=160, anchor='center')
         self.tree.grid(row=1, column=0, sticky='nsew', padx=16, pady=(0, 16))
         scroll = ttk.Scrollbar(card, orient='vertical', command=self.tree.yview)
         self.tree.configure(yscrollcommand=scroll.set)
@@ -62,6 +65,7 @@ class VistaProyectos(tk.Frame):
         pie = tk.Frame(card, bg=CARD)
         pie.grid(row=2, column=0, sticky='ew', padx=16, pady=(0, 16))
         tk.Button(pie, text='Abrir proyecto seleccionado', command=self.ejecutar_abrir, bg=ACCENT, fg='white', relief='flat', cursor='hand2', padx=16, pady=6).pack(side='left')
+        tk.Button(pie, text='Eliminar proyecto', command=self.ejecutar_eliminar, bg='#dc2626', fg='white', relief='flat', cursor='hand2', padx=16, pady=6).pack(side='left', padx=(10, 0))
         self.lbl_mensaje_abrir = tk.Label(pie, text='', bg=CARD, font=('Segoe UI', 10))
         self.lbl_mensaje_abrir.pack(side='left', padx=10)
 
@@ -81,6 +85,21 @@ class VistaProyectos(tk.Frame):
         except Exception as e:
             self.lbl_mensaje_guardar.configure(text=str(e), fg=ERROR)
 
+    def ejecutar_eliminar(self):
+        seleccion = self.tree.selection()
+        if not seleccion:
+            self.lbl_mensaje_abrir.configure(text='Selecciona un proyecto.', fg=ERROR)
+            return
+        nombre = self.tree.item(seleccion[0], 'values')[0]
+        if not messagebox.askyesno('Eliminar proyecto', f'¿Eliminar "{nombre}"? Esta acción no se puede deshacer.'):
+            return
+        try:
+            eliminar_proyecto(nombre)
+            self.cargar_lista()
+            self.lbl_mensaje_abrir.configure(text=f'"{nombre}" eliminado.', fg=SUCCESS)
+        except Exception as e:
+            self.lbl_mensaje_abrir.configure(text=str(e), fg=ERROR)
+
     def ejecutar_abrir(self):
         seleccion = self.tree.selection()
         if not seleccion:
@@ -99,9 +118,8 @@ class VistaProyectos(tk.Frame):
 
     def cargar_lista(self):
         self.tree.delete(*self.tree.get_children())
-        proyectos = listar_proyectos()
-        for p in proyectos:
-            self.tree.insert('', 'end', values=(p,))
+        for nombre, fecha in listar_proyectos():
+            self.tree.insert('', 'end', values=(nombre, fecha))
 
     def on_show(self):
         self.cargar_lista()

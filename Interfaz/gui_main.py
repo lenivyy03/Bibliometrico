@@ -9,6 +9,7 @@ from gui_autoria import VistaProductividad, VistaEstadisticasAutoria, VistaTopAu
 from gui_geografia import VistaPaises, VistaUniversidades
 from gui_impacto import VistaTrabajosCitados, VistaPromedioCitas, VistaTop10Trabajos
 from gui_proyectos import VistaProyectos
+from gui_exportar import VistaExportar
 
 BG_APP = "#f5f5f5"
 SIDEBAR = "#1e1e2e"
@@ -70,6 +71,10 @@ class AppBibliometrico(tk.Tk):
         self.current_view = None
         self.archivo_cargado = False
 
+        self.export_selections: set = set()
+        self.export_getters: dict = {}
+        self.export_toggle_cbs: dict = {}
+
         self._configurar_estilos()
         self._crear_layout()
         self._crear_sidebar()
@@ -109,8 +114,30 @@ class AppBibliometrico(tk.Tk):
         self.content.grid_columnconfigure(0, weight=1)
 
     def _crear_sidebar(self) -> None:
+        # Logo fijo (no se desplaza)
         tk.Label(self.sidebar, text="BIBLIOMÉTRICO", bg=SIDEBAR, fg="white", font=(FONT_FAMILY, 16, "bold")).pack(anchor="w", padx=18, pady=(18, 6))
-        tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 10)).pack(anchor="w", padx=18, pady=(0, 16))
+        tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 10)).pack(anchor="w", padx=18, pady=(0, 10))
+
+        # Canvas scrollable para la navegación
+        nav_canvas = tk.Canvas(self.sidebar, bg=SIDEBAR, highlightthickness=0)
+        nav_canvas.pack(fill="both", expand=True)
+
+        nav_inner = tk.Frame(nav_canvas, bg=SIDEBAR)
+        nav_window = nav_canvas.create_window((0, 0), window=nav_inner, anchor="nw")
+
+        def _on_nav_inner_configure(_e=None):
+            nav_canvas.configure(scrollregion=nav_canvas.bbox("all"))
+
+        def _on_nav_canvas_configure(e):
+            nav_canvas.itemconfigure(nav_window, width=e.width)
+
+        def _on_mousewheel(e):
+            nav_canvas.yview_scroll(-1 * (e.delta // 120), "units")
+
+        nav_inner.bind("<Configure>", _on_nav_inner_configure)
+        nav_canvas.bind("<Configure>", _on_nav_canvas_configure)
+        nav_canvas.bind("<MouseWheel>", _on_mousewheel)
+        nav_inner.bind("<MouseWheel>", _on_mousewheel)
 
         secciones = [
             ("PROYECTOS", [("gestion_proyectos", "Gestion de proyectos")]),
@@ -118,13 +145,14 @@ class AppBibliometrico(tk.Tk):
             ("PRODUCTIVIDAD", [("productividad", "Métricas generales"), ("autoria", "Estadísticas de autoría"), ("top_autores", "Top 10 autores")]),
             ("GEOGRAFÍA", [("paises", "Lista de países"), ("universidades", "Universidades")]),
             ("IMPACTO", [("trabajos_citados", "Trabajos más citados"), ("promedio_citas", "Promedio anual de citas"), ("top_trabajos", "Top 10 trabajos")]),
+            ("EXPORTAR", [("exportar", "Exportar reporte")]),
         ]
 
         for titulo, botones in secciones:
-            tk.Label(self.sidebar, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(10, 6))
+            tk.Label(nav_inner, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(10, 6))
             for nombre, texto in botones:
                 boton = ColorButton(
-                    self.sidebar,
+                    nav_inner,
                     text=texto,
                     command=lambda n=nombre: self.cambiar_vista(n),
                     bg=SIDEBAR,
@@ -141,6 +169,7 @@ class AppBibliometrico(tk.Tk):
                     borderwidth=0,
                 )
                 boton.pack(fill="x")
+                boton.bind("<MouseWheel>", _on_mousewheel)
                 self.nav_buttons[nombre] = boton
 
     def _crear_contenido(self) -> None:
@@ -156,6 +185,7 @@ class AppBibliometrico(tk.Tk):
             "trabajos_citados": VistaTrabajosCitados(self.content, self),
             "promedio_citas": VistaPromedioCitas(self.content, self),
             "top_trabajos": VistaTop10Trabajos(self.content, self),
+            "exportar": VistaExportar(self.content, self),
         }
         for nombre, vista in vistas.items():
             vista.grid(row=0, column=0, sticky="nsew")
@@ -191,9 +221,31 @@ class AppBibliometrico(tk.Tk):
             else:
                 boton.configure(bg=SIDEBAR, fg=SIDEBAR_TEXT, activebackground=ACCENT_SOFT)
 
+    def toggle_exportacion(self, key: str) -> None:
+        if key in self.export_selections:
+            self.export_selections.discard(key)
+            seleccionado = False
+        else:
+            self.export_selections.add(key)
+            seleccionado = True
+        for cb in self.export_toggle_cbs.get(key, []):
+            cb(seleccionado)
+
+    def registrar_toggle_cb(self, key: str, cb) -> None:
+        self.export_toggle_cbs.setdefault(key, []).append(cb)
+
+    def reset_export_state(self) -> None:
+        keys = list(self.export_selections)
+        self.export_selections.clear()
+        self.export_getters.clear()
+        for key in keys:
+            for cb in self.export_toggle_cbs.get(key, []):
+                cb(False)
+
     def actualizar_estado(self, nombre_archivo: str, total_registros: int) -> None:
         self.nombre_archivo = nombre_archivo
         self.archivo_cargado = True
+        self.reset_export_state()
         self.lbl_archivo.configure(text=f"Archivo: {nombre_archivo}")
         self.lbl_registros.configure(text=f"{total_registros} registros")
 

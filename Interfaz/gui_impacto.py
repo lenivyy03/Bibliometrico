@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import webbrowser
-
 from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
 impacto_mod = load_project_module("impacto")
 tops_mod = load_project_module("tops")
-
 trabajos_mas_citados = impacto_mod.trabajos_mas_citados
 calcular_promedio_citas_anual = impacto_mod.calcular_promedio_citas_anual
 ordenar_por_promedio_citas = impacto_mod.ordenar_por_promedio_citas
@@ -179,6 +177,11 @@ class VistaPromedioCitas(_BaseImpacto):
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        self._btn_exportar_citas = ColorButton(
+            filtro, text="Exportar ✓", command=self._toggle_exportar_citas,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_citas.grid(row=0, column=2, padx=(8, 0))
+        self.app.registrar_toggle_cb("citas", self._on_toggle_cb_citas)
 
         tabla_card = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         tabla_card.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 10))
@@ -223,6 +226,7 @@ class VistaPromedioCitas(_BaseImpacto):
 
     def _carga_exitosa(self, tabla) -> None:
         self._tabla = tabla.copy()
+        self.app.export_getters["citas"] = lambda: self._tabla
         self.aplicar_filtro()
         self._set_status("Datos actualizados.")
 
@@ -264,6 +268,18 @@ class VistaPromedioCitas(_BaseImpacto):
         )
         self.resumen.configure(text=texto)
 
+    def _toggle_exportar_citas(self) -> None:
+        if self._tabla is None:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("citas")
+
+    def _on_toggle_cb_citas(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_citas.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_citas.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
+
     def on_show(self) -> None:
         if self.app.df is not None:
             self.cargar_datos()
@@ -273,11 +289,15 @@ class VistaTop10Trabajos(_BaseImpacto):
     def __init__(self, parent: tk.Widget, app: tk.Misc):
         super().__init__(parent, app, "Top 10 trabajos")
         self.btn_actualizar.configure(command=self.cargar_datos)
+        self._datos = []
 
         acciones = tk.Frame(self, bg=BG)
         acciones.grid(row=1, column=0, sticky="w", padx=24, pady=(0, 10))
-        ColorButton(acciones, text="Exportar a Word", command=lambda: print("pendiente"), bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left")
-        ColorButton(acciones, text="Exportar a Excel", command=lambda: print("pendiente"), bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7).pack(side="left", padx=(8, 0))
+        self._btn_exportar_top_trab = ColorButton(
+            acciones, text="Exportar ✓", command=self._toggle_exportar_top_trab,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_top_trab.pack(side="left")
+        self.app.registrar_toggle_cb("top_trabajos", self._on_toggle_cb_top_trab)
 
         self.scrollable = ScrollableCanvas(self, bg=BG)
         self.scrollable.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 24))
@@ -301,7 +321,9 @@ class VistaTop10Trabajos(_BaseImpacto):
         self._run_in_thread(worker)
 
     def _carga_exitosa(self, datos) -> None:
-        for idx, (referencia, citas, anio, doi) in enumerate(datos, start=1):
+        self._datos = list(datos)
+        self.app.export_getters["top_trabajos"] = lambda: self._datos
+        for idx, (referencia, citas, anio, doi) in enumerate(self._datos, start=1):
             self._agregar_card(idx, referencia, citas, anio, doi)
         self._set_status("Datos actualizados.")
 
@@ -323,6 +345,18 @@ class VistaTop10Trabajos(_BaseImpacto):
             enlace.bind("<Button-1>", lambda _e, value=doi: webbrowser.open(f"https://doi.org/{value}"))
         else:
             tk.Label(card, text="Sin DOI", bg=CARD, fg="#9ca3af", font=(FONT_FAMILY, 10)).pack(anchor="w", padx=16, pady=(0, 12))
+
+    def _toggle_exportar_top_trab(self) -> None:
+        if not self._datos:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("top_trabajos")
+
+    def _on_toggle_cb_top_trab(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_top_trab.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_top_trab.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
 
     def on_show(self) -> None:
         if self.app.df is not None:

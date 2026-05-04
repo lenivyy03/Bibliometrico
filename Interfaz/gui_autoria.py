@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
@@ -91,6 +91,7 @@ class VistaProductividad(_BaseVistaDatos):
     def __init__(self, parent: tk.Widget, app: tk.Misc):
         super().__init__(parent, app, "Métricas generales")
         self.btn_actualizar.configure(command=self.cargar_datos)
+        self._metricas = {}
 
         tarjetas = tk.Frame(self, bg=BG)
         tarjetas.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 10))
@@ -104,6 +105,14 @@ class VistaProductividad(_BaseVistaDatos):
         self.card_unico = TarjetaMetrica(tarjetas, "Artículos de un solo autor")
         self.card_unico.grid(row=0, column=2, sticky="ew", padx=(10, 0))
 
+        acciones = tk.Frame(self, bg=BG)
+        acciones.grid(row=2, column=0, sticky="w", padx=24, pady=(8, 0))
+        self._btn_exportar_prod = ColorButton(
+            acciones, text="Exportar ✓", command=self._toggle_exportar,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_prod.pack(side="left")
+        self.app.registrar_toggle_cb("metricas", self._on_toggle_cb_prod)
+
         info = tk.Label(
             self,
             text="Resumen consolidado de productividad para el archivo cargado.",
@@ -111,7 +120,7 @@ class VistaProductividad(_BaseVistaDatos):
             fg=MUTED,
             font=(FONT_FAMILY, 10),
         )
-        info.grid(row=2, column=0, sticky="nw", padx=24, pady=(8, 0))
+        info.grid(row=3, column=0, sticky="nw", padx=24, pady=(4, 0))
 
     def cargar_datos(self) -> None:
         self._set_error("")
@@ -126,6 +135,8 @@ class VistaProductividad(_BaseVistaDatos):
     def _calcular(self) -> None:
         try:
             metricas = metricas_prod(self.app.df)
+            self._metricas = metricas
+            self.app.export_getters["metricas"] = lambda: self._metricas
             self.card_total.actualizar(str(metricas.get("Total de publicaciones", 0)))
             self.card_autores.actualizar(str(metricas.get("Autores únicos", 0)))
             self.card_unico.actualizar(str(metricas.get("Artículos de un solo autor", 0)))
@@ -133,6 +144,18 @@ class VistaProductividad(_BaseVistaDatos):
         except Exception as exc:
             self._set_error(f"No se pudieron calcular las métricas: {exc}")
             self._set_status("")
+
+    def _toggle_exportar(self) -> None:
+        if not self._metricas:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("metricas")
+
+    def _on_toggle_cb_prod(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_prod.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_prod.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
 
     def on_show(self) -> None:
         if self.app.df is not None:
@@ -169,6 +192,11 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        self._btn_exportar_aut = ColorButton(
+            filtro, text="Exportar ✓", command=self._toggle_exportar_aut,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_aut.grid(row=0, column=2, padx=(8, 0))
+        self.app.registrar_toggle_cb("autoria_est", self._on_toggle_cb_aut)
 
         tabla_card = tk.Frame(cuerpo, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         tabla_card.grid(row=2, column=0, sticky="nsew")
@@ -217,6 +245,7 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
             promedio = num_promedio_autores(self.app.df)
             tabla = tabla_comparativa_autoria(self.app.df)
             self._tabla_completa = tabla
+            self.app.export_getters["autoria_est"] = lambda: self._tabla_completa
 
             self.card_min.actualizar("—" if minimo == -1 else str(minimo))
             self.card_max.actualizar("—" if maximo == -1 else str(maximo))
@@ -250,6 +279,18 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
                 ),
             )
 
+    def _toggle_exportar_aut(self) -> None:
+        if self._tabla_completa is None:
+            messagebox.showwarning("Sin datos", "Carga los datos primero.")
+            return
+        self.app.toggle_exportacion("autoria_est")
+
+    def _on_toggle_cb_aut(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_aut.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_aut.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
+
     def on_show(self) -> None:
         if self.app.df is not None:
             self.cargar_datos()
@@ -260,8 +301,16 @@ class VistaTopAutores(_BaseVistaDatos):
         super().__init__(parent, app, "Top 10 autores")
         self.btn_actualizar.configure(command=self.cargar_datos)
 
+        acciones = tk.Frame(self, bg=BG)
+        acciones.grid(row=1, column=0, sticky="w", padx=24, pady=(0, 8))
+        self._btn_exportar_top = ColorButton(
+            acciones, text="Exportar ✓", command=self._toggle_exportar_top,
+            bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
+        self._btn_exportar_top.pack(side="left")
+        self.app.registrar_toggle_cb("top_autores", self._on_toggle_cb_top)
+
         contenedor = tk.Frame(self, bg=BG)
-        contenedor.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=24, pady=(0, 24))
+        contenedor.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 24))
         contenedor.grid_rowconfigure(0, weight=1)
         contenedor.grid_columnconfigure(0, weight=1)
 
@@ -359,6 +408,17 @@ class VistaTopAutores(_BaseVistaDatos):
         else:
             detalle.grid()
             boton.configure(text="Ocultar títulos")
+
+    def _toggle_exportar_top(self) -> None:
+        if not self._verificar_df():
+            return
+        self.app.toggle_exportacion("top_autores")
+
+    def _on_toggle_cb_top(self, seleccionado: bool) -> None:
+        if seleccionado:
+            self._btn_exportar_top.configure(bg="#22c55e", fg="white", text="✓ Exportar")
+        else:
+            self._btn_exportar_top.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
 
     def _limpiar_cards(self) -> None:
         for widget in self.inner.winfo_children():

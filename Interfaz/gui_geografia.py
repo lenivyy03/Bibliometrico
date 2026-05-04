@@ -6,7 +6,7 @@ from tkinter import ttk
 from gui_utils import FONT_FAMILY, ColorButton
 from compat_imports import load_project_module
 
-paises_mod = load_project_module("lista_paises")
+paises_mod = load_project_module("tops")
 filtrado_mod = load_project_module("filtrado")
 
 extraer_paises = paises_mod.extraer_paises

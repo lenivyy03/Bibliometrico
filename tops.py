@@ -77,3 +77,62 @@ def top_autores(df, tipo):
 
     else:
         return -1
+
+# HU 41 Top 10 paises con mas publicaciones
+def Obtener_paises(afili): # afili = afiliacion
+    # Se separa por ;, para cada institucion
+    inst = afili.split(';')
+    paises = []
+    for i in inst:
+        partes = i.split(',') # separamos los elementos de cada institucion
+        pais = partes[-1].strip() #tomamos el pais y limpiamos posibles espacios
+        paises.append(pais)
+    return list(set(paises))
+
+def top_paises_publicaciones(df):
+    if df is None: return []
+    if 'Affiliations' not in df.columns: return []
+
+    afiliaciones = df['Affiliations'].dropna()
+    numero_paises = afiliaciones.apply(Obtener_paises).explode().value_counts()
+    return numero_paises.head(10)
+
+# HU 41 Top 10 paises con mas publicaciones
+def Obtener_paises(afili): # afili = afiliacion
+    # Se separa por ;, para cada institucion
+    inst = afili.split(';')
+    paises = []
+    for i in inst:
+        partes = i.split(',') # separamos los elementos de cada institucion
+        pais = partes[-1].strip() #tomamos el pais y limpiamos posibles espacios
+        paises.append(pais)
+    return list(set(paises))
+
+def top_paises_publicaciones(df):
+    if df is None: return []
+    if 'Affiliations' not in df.columns: return []
+
+    afiliaciones = df['Affiliations'].dropna()
+    numero_paises = afiliaciones.apply(Obtener_paises).explode().value_counts()
+    return numero_paises.head(10)
+
+
+import pandas as pd
+
+
+# Funcion que devuelve una serie con paises de todos los articulos
+def extraer_paises(df):
+    # Se descartan las filas sin afiliacion, y se crea una serie de Pandas
+    # con todas las posibles "afiliaciones" de un solo articulo
+    afiliaciones = df['Affiliations'].dropna().str.split(';').explode()
+
+    # En Scopus, la ultima palabra de cada afiliacion individual siempre es el pais.
+    # Creamos una serie escogiendo el pais de cada afiliacion, y cuidamos el formato
+    paises_limpios = afiliaciones.apply(lambda fila: fila.split(',')[-1].strip())
+    return paises_limpios
+
+
+# Funcion que devuelve una serie con paises y cuantos articulos corresponden a cada uno
+def obtener_frecuencias_paises(paises_limpios):
+    frecuencias = paises_limpios.value_counts()
+    return frecuencias

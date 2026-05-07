@@ -59,27 +59,33 @@ def apply_theme(root: tk.Misc) -> None:
         background=[("active", _BORDER)],
     )
 
-    # ── Scrollbars — delgadas y modernas ─────────────────────────────────────
-    _sb = dict(
-        background="#c7ccd6",
-        troughcolor=_BG,
-        arrowcolor=_BG,   # flechas invisibles (mismo color que el trough)
-        borderwidth=0,
-        relief="flat",
-        arrowsize=0,
-    )
-    style.configure("Vertical.TScrollbar", width=7, **_sb)
-    style.configure("Horizontal.TScrollbar", width=7, **_sb)
-    style.map(
-        "Vertical.TScrollbar",
-        background=[("active", _MUTED), ("!active", "#c7ccd6")],
-        troughcolor=[("active", _BG), ("!active", _BG)],
-    )
-    style.map(
-        "Horizontal.TScrollbar",
-        background=[("active", _MUTED), ("!active", "#c7ccd6")],
-        troughcolor=[("active", _BG), ("!active", _BG)],
-    )
+    # ── Scrollbars — modernas sin flechas ───────────────────────────────────
+    style.layout("Vertical.TScrollbar", [
+        ("Vertical.Scrollbar.trough", {
+            "sticky": "ns",
+            "children": [
+                ("Vertical.Scrollbar.thumb", {"sticky": "nswe", "expand": True})
+            ],
+        })
+    ])
+    style.layout("Horizontal.TScrollbar", [
+        ("Horizontal.Scrollbar.trough", {
+            "sticky": "ew",
+            "children": [
+                ("Horizontal.Scrollbar.thumb", {"sticky": "nswe", "expand": True})
+            ],
+        })
+    ])
+    style.configure("Vertical.TScrollbar",
+                     width=8, troughcolor=_BORDER, background="#bfc5ce",
+                     borderwidth=0, relief="flat")
+    style.configure("Horizontal.TScrollbar",
+                     width=8, troughcolor=_BORDER, background="#bfc5ce",
+                     borderwidth=0, relief="flat")
+    style.map("Vertical.TScrollbar",
+              background=[("active", _MUTED), ("!active", "#bfc5ce")])
+    style.map("Horizontal.TScrollbar",
+              background=[("active", _MUTED), ("!active", "#bfc5ce")])
 
     # ── Notebook (tabs) ───────────────────────────────────────────────────────
     style.configure(

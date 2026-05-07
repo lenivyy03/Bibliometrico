@@ -89,17 +89,11 @@ class _BaseImpacto(tk.Frame):
 
 
 class VistaTrabajosCitados(_BaseImpacto):
-    _BATCH = 100
-
     def __init__(self, parent: tk.Widget, app: tk.Misc):
         super().__init__(parent, app, "Trabajos más citados")
         self.btn_actualizar.configure(command=self.cargar_datos)
         self._datos = []
         self._datos_filtrados = []
-        self._offset = 0
-        self._cargando_mas = False
-        self._carga_pendiente = False
-        self._nota_widget = None
         self._tooltip_after = None
 
         filtro = tk.Frame(self, bg=BG)
@@ -110,24 +104,30 @@ class VistaTrabajosCitados(_BaseImpacto):
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
 
-        self.scrollable = ScrollableCanvas(self, bg=BG)
-        self.scrollable.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 8))
+        tabla_card = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
+        tabla_card.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 10))
+        tabla_card.grid_rowconfigure(0, weight=1)
+        tabla_card.grid_columnconfigure(0, weight=1)
 
-        # Interceptar yscrollcommand para detectar cuando el usuario llega al fondo.
-        # Se difiere _cargar_mas con after() para evitar re-entrancia dentro del callback.
-        def _on_yview(first, last):
-            self.scrollable.scroll.set(first, last)
-            if float(last) >= 0.80 and not self._cargando_mas and not self._carga_pendiente:
-                self._carga_pendiente = True
-                self.after(10, self._trigger_carga)
-        self.scrollable.canvas.configure(yscrollcommand=_on_yview)
+        self.tree = ttk.Treeview(tabla_card, columns=("Citas", "Referencia"), show="headings")
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        setup_treeview_tags(self.tree)
+        self.tree.heading("Citas", text="Citas")
+        self.tree.heading("Referencia", text="Referencia APA")
+        self.tree.column("Citas", width=80, anchor="center", stretch=False)
+        self.tree.column("Referencia", width=700, anchor="w")
+        scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scroll.set)
+        scroll.grid(row=0, column=1, sticky="ns")
 
-        self.copy_label = tk.Label(self, text="", bg=BG, fg=ACCENT, font=(FONT_FAMILY, 10, "bold"))
+        self.tree.bind("<Double-1>", self._on_double_click)
+
+        self.copy_label = tk.Label(self, text="Doble clic en una fila para copiar la referencia", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
         self.copy_label.grid(row=3, column=0, sticky="w", padx=24, pady=(0, 24))
 
     def cargar_datos(self) -> None:
         self._set_error("")
-        self.scrollable.clear()
+        self.tree.delete(*self.tree.get_children())
         if not self._verificar_df():
             return
         self._set_status("Calculando…")
@@ -146,103 +146,33 @@ class VistaTrabajosCitados(_BaseImpacto):
     def _carga_exitosa(self, datos):
         self._datos = list(datos)
         self.aplicar_filtro()
-        self._set_status("Datos actualizados.")
+        self._set_status(f"Datos actualizados · {len(self._datos)} trabajos citados")
 
     def aplicar_filtro(self) -> None:
-        self.scrollable.clear()
-        self._nota_widget = None
-        self._offset = 0
+        self.tree.delete(*self.tree.get_children())
         consulta = self.busqueda_var.get().strip().lower()
         if consulta:
             self._datos_filtrados = [item for item in self._datos if consulta in str(item[0]).lower()]
         else:
             self._datos_filtrados = self._datos
-        self._renderizar_lote()
+        for idx, (referencia, citas) in enumerate(self._datos_filtrados):
+            insert_striped(self.tree, idx, (citas, str(referencia)))
 
-    def _renderizar_lote(self) -> None:
-        lote = self._datos_filtrados[self._offset: self._offset + self._BATCH]
-        for idx, (referencia, citas) in enumerate(lote, start=self._offset + 1):
-            self._agregar_item(idx, referencia, citas)
-        self._offset += len(lote)
-        # Forzar recálculo de geometría antes de actualizar scrollregion
-        self.scrollable.inner.update_idletasks()
-        self.scrollable.canvas.configure(scrollregion=self.scrollable.canvas.bbox("all"))
-        self._actualizar_nota()
-
-    def _trigger_carga(self) -> None:
-        """Punto de entrada diferido desde _on_yview (evita re-entrancia en yscrollcommand)."""
-        self._carga_pendiente = False
-        self._cargar_mas()
-
-    def _cargar_mas(self) -> None:
-        if self._cargando_mas or self._offset >= len(self._datos_filtrados):
-            return
-        self._cargando_mas = True
-        try:
-            if self._nota_widget is not None:
-                try:
-                    self._nota_widget.destroy()
-                except tk.TclError:
-                    pass
-                self._nota_widget = None
-            self._renderizar_lote()
-        finally:
-            self._cargando_mas = False
-
-    def _actualizar_nota(self) -> None:
-        if self._nota_widget is not None:
-            try:
-                self._nota_widget.destroy()
-            except tk.TclError:
-                pass
-            self._nota_widget = None
-        restantes = len(self._datos_filtrados) - self._offset
-        if restantes <= 0:
-            # Mostrar fin de lista cuando ya no hay más datos
-            self._nota_widget = tk.Label(
-                self.scrollable.inner,
-                text=f"— Fin de la lista · {self._offset} trabajos citados en total —",
-                bg=BG, fg=MUTED,
-                font=(FONT_FAMILY, 10),
-                anchor="center",
-                pady=12,
-            )
-            self._nota_widget.pack(fill="x", pady=(4, 16))
-            bind_mousewheel(self._nota_widget, self.scrollable.canvas)
-            return
-        texto = f"Cargar {min(restantes, self._BATCH)} más  ({self._offset} de {len(self._datos_filtrados)} mostrados)"
-        self._nota_widget = ColorButton(
-            self.scrollable.inner,
-            text=texto,
-            command=self._cargar_mas,
-            bg="#ede9fe",
-            fg=ACCENT,
-            activebackground="#ddd6fe",
-            font=(FONT_FAMILY, 10, "bold"),
-            pady=10,
-        )
-        self._nota_widget.pack(fill="x", pady=(8, 4))
-        bind_mousewheel_recursive(self._nota_widget, self.scrollable.canvas)
-
-    def _agregar_item(self, indice: int, referencia: str, citas: int) -> None:
-        card = tk.Frame(self.scrollable.inner, bg=CARD, highlightbackground=BORDER, highlightthickness=1, cursor="hand2")
-        card.pack(fill="x", pady=6)
-        titulo = tk.Label(card, text=f"{indice}. {citas} citas", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 11, "bold"), anchor="w", cursor="hand2")
-        titulo.pack(fill="x", padx=16, pady=(12, 4))
-        detalle = tk.Label(card, text=referencia, bg=CARD, fg=TEXT, justify="left", wraplength=760, anchor="w", cursor="hand2", font=(FONT_FAMILY, 10))
-        detalle.pack(fill="x", padx=16, pady=(0, 12))
-
-        for widget in (card, titulo, detalle):
-            widget.bind("<Button-1>", lambda _e, ref=referencia: self._copiar_referencia(ref))
-        bind_mousewheel_recursive(card, self.scrollable.canvas)
+    def _on_double_click(self, _event) -> None:
+        sel = self.tree.selection()
+        if sel:
+            values = self.tree.item(sel[0], "values")
+            if values and len(values) > 1:
+                self._copiar_referencia(str(values[1]))
 
     def _copiar_referencia(self, referencia: str) -> None:
         self.clipboard_clear()
         self.clipboard_append(referencia)
-        self.copy_label.configure(text="¡Copiado!")
+        self.copy_label.configure(text="¡Referencia copiada!", fg=ACCENT)
         if self._tooltip_after:
             self.after_cancel(self._tooltip_after)
-        self._tooltip_after = self.after(1200, lambda: self.copy_label.configure(text=""))
+        self._tooltip_after = self.after(2000, lambda: self.copy_label.configure(
+            text="Doble clic en una fila para copiar la referencia", fg=MUTED))
 
     def on_show(self) -> None:
         if self.app.df is not None:

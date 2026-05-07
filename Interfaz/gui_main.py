@@ -136,11 +136,10 @@ class AppBibliometrico(tk.Tk):
             ("PRODUCTIVIDAD", [("productividad", "Métricas generales"), ("autoria", "Estadísticas de autoría"), ("top_autores", "Top 10 autores")]),
             ("GEOGRAFÍA", [("paises", "Lista de países"), ("universidades", "Universidades")]),
             ("IMPACTO", [("trabajos_citados", "Trabajos más citados"), ("promedio_citas", "Promedio anual de citas"), ("top_trabajos", "Top 10 trabajos")]),
-            ("EXPORTAR", [("exportar", "Exportar reporte")]),
         ]
 
         for titulo, botones in secciones:
-            tk.Label(nav_inner, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(10, 6))
+            tk.Label(nav_inner, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(12, 2))
             for nombre, texto in botones:
                 boton = ColorButton(
                     nav_inner,
@@ -154,7 +153,7 @@ class AppBibliometrico(tk.Tk):
                     anchor="w",
                     cursor="hand2",
                     padx=18,
-                    pady=10,
+                    pady=4,
                     font=(FONT_FAMILY, 10),
                     disabledforeground="#6b7280",
                     borderwidth=0,
@@ -162,6 +161,29 @@ class AppBibliometrico(tk.Tk):
                 boton.pack(fill="x")
                 bind_mousewheel(boton, nav_canvas)
                 self.nav_buttons[nombre] = boton
+
+        # Botón de exportar fijo en la parte inferior (siempre visible sin scroll)
+        tk.Frame(self.sidebar, bg="#2d2d3e", height=1).pack(fill="x", side="bottom")
+        exportar_btn = ColorButton(
+            self.sidebar,
+            text="Exportar reporte",
+            command=lambda: self.cambiar_vista("exportar"),
+            bg=SIDEBAR,
+            fg=SIDEBAR_TEXT,
+            relief="flat",
+            activebackground=ACCENT_SOFT,
+            activeforeground="white",
+            anchor="w",
+            cursor="hand2",
+            padx=18,
+            pady=12,
+            font=(FONT_FAMILY, 10),
+            disabledforeground="#6b7280",
+            borderwidth=0,
+        )
+        exportar_btn.pack(fill="x", side="bottom")
+        tk.Label(self.sidebar, text="EXPORTAR", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(8, 2), side="bottom")
+        self.nav_buttons["exportar"] = exportar_btn
 
     def _crear_contenido(self) -> None:
         vistas = {

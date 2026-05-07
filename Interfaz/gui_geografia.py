@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from gui_utils import FONT_FAMILY, ColorButton
+from gui_utils import FONT_FAMILY, ColorButton, styled_entry, styled_listbox, setup_treeview_tags, insert_striped
 from compat_imports import load_project_module
 
 paises_mod = load_project_module("tops")
@@ -85,7 +85,7 @@ class VistaPaises(_BaseVistaGeo):
         tk.Label(filtro, text="Buscar país:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
-        tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
         self._btn_exportar_paises = ColorButton(
             filtro, text="Exportar ✓", command=self._toggle_exportar_paises,
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
@@ -105,6 +105,7 @@ class VistaPaises(_BaseVistaGeo):
         self.tree.column("Articulos", width=140, anchor="center")
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree.bind("<<TreeviewSelect>>", self._mostrar_porcentaje)
+        setup_treeview_tags(self.tree)
         scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
@@ -140,8 +141,8 @@ class VistaPaises(_BaseVistaGeo):
         datos = self._tabla_completa
         if consulta:
             datos = [fila for fila in datos if consulta in str(fila[0]).lower()]
-        for pais, conteo in datos:
-            self.tree.insert("", "end", values=(pais, conteo))
+        for idx, (pais, conteo) in enumerate(datos):
+            insert_striped(self.tree, idx, (pais, conteo))
         self.porcentaje_label.configure(text="")
 
     def _mostrar_porcentaje(self, _event=None) -> None:
@@ -211,6 +212,7 @@ class VistaUniversidades(_BaseVistaGeo):
         self.tree_general.column("Numero_Articulos", width=120, anchor="center")
         self.tree_general.grid(row=0, column=0, sticky="nsew")
         self.tree_general.bind("<<TreeviewSelect>>", self._mostrar_articulos_universidad)
+        setup_treeview_tags(self.tree_general)
         scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree_general.yview)
         self.tree_general.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
@@ -228,7 +230,7 @@ class VistaUniversidades(_BaseVistaGeo):
         detalle_card.grid_rowconfigure(1, weight=1)
         detalle_card.grid_columnconfigure(0, weight=1)
         tk.Label(detalle_card, text="Artículos de la universidad seleccionada", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 12, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
-        self.listbox_titulos = tk.Listbox(detalle_card, activestyle="none", borderwidth=0, highlightthickness=0, font=(FONT_FAMILY, 10))
+        self.listbox_titulos = styled_listbox(detalle_card, font=(FONT_FAMILY, 10))
         self.listbox_titulos.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
         scroll_list = ttk.Scrollbar(detalle_card, orient="vertical", command=self.listbox_titulos.yview)
         self.listbox_titulos.configure(yscrollcommand=scroll_list.set)
@@ -258,7 +260,7 @@ class VistaUniversidades(_BaseVistaGeo):
         ]
         for idx, (titulo, variable) in enumerate(campos):
             tk.Label(filtros, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=idx * 2, sticky="w")
-            tk.Entry(filtros, textvariable=variable, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=idx * 2 + 1, sticky="ew", padx=(6, 12), ipady=5)
+            styled_entry(filtros, textvariable=variable, font=(FONT_FAMILY, 10)).grid(row=0, column=idx * 2 + 1, sticky="ew", padx=(6, 12), ipady=5)
 
         botones = tk.Frame(self.tab_top, bg=BG)
         botones.grid(row=1, column=0, sticky="nw", pady=(0, 10))
@@ -285,6 +287,7 @@ class VistaUniversidades(_BaseVistaGeo):
         self.tree_top.column("Citas_Totales", width=100, anchor="center")
         self.tree_top.column("Pais", width=150, anchor="w")
         self.tree_top.grid(row=0, column=0, sticky="nsew")
+        setup_treeview_tags(self.tree_top)
         scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree_top.yview)
         self.tree_top.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
@@ -312,8 +315,8 @@ class VistaUniversidades(_BaseVistaGeo):
             }
             self.app.export_getters["univ_lista"] = lambda: self._ranking
             self.tree_general.delete(*self.tree_general.get_children())
-            for _, fila in ranking.iterrows():
-                self.tree_general.insert("", "end", values=(fila["Universidad_Institucion"], fila["Numero_Articulos"]))
+            for idx, (_, fila) in enumerate(ranking.iterrows()):
+                insert_striped(self.tree_general, idx, (fila["Universidad_Institucion"], fila["Numero_Articulos"]))
             self._set_status("Datos actualizados.")
             self.aplicar_filtros()
         except Exception as exc:
@@ -353,9 +356,9 @@ class VistaUniversidades(_BaseVistaGeo):
             self._top = top
             self.app.export_getters["univ_top"] = lambda: self._top
             self.tree_top.delete(*self.tree_top.get_children())
-            for _, fila in top.iterrows():
+            for idx, (_, fila) in enumerate(top.iterrows()):
                 pais_val = self._pais_por_universidad.get(str(fila["Universidad_Institucion"]), "—")
-                self.tree_top.insert("", "end", values=(fila["Universidad_Institucion"], fila["Numero_Articulos"], fila["Citas_Totales"], pais_val))
+                insert_striped(self.tree_top, idx, (fila["Universidad_Institucion"], fila["Numero_Articulos"], fila["Citas_Totales"], pais_val))
         except Exception as exc:
             self._set_error(f"No se pudieron aplicar los filtros: {exc}")
 

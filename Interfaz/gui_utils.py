@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import tkinter as tk
+from tkinter import ttk
 
 if sys.platform == "win32":
     FONT_FAMILY = "Segoe UI"
@@ -10,9 +11,177 @@ elif sys.platform == "darwin":
 else:
     FONT_FAMILY = "DejaVu Sans"
 
+_ACCENT = "#7c3aed"
+_BG = "#f5f5f5"
+_CARD = "#ffffff"
+_TEXT = "#1f2937"
+_MUTED = "#6b7280"
+_BORDER = "#e5e7eb"
+_ROW_ALT = "#f9fafb"
+
+
+def apply_theme(root: tk.Misc) -> None:
+    """Aplica estilos ttk consistentes en macOS, Windows y Linux."""
+    style = ttk.Style(root)
+    try:
+        style.theme_use("clam")
+    except tk.TclError:
+        pass
+
+    # ── Treeview ──────────────────────────────────────────────────────────────
+    style.configure(
+        "Treeview",
+        background=_CARD,
+        foreground=_TEXT,
+        fieldbackground=_CARD,
+        font=(FONT_FAMILY, 10),
+        rowheight=28,
+        borderwidth=0,
+        relief="flat",
+    )
+    style.configure(
+        "Treeview.Heading",
+        background=_BG,
+        foreground=_TEXT,
+        font=(FONT_FAMILY, 10, "bold"),
+        relief="flat",
+        borderwidth=0,
+        padding=(8, 6),
+    )
+    style.map(
+        "Treeview",
+        background=[("selected", _ACCENT)],
+        foreground=[("selected", "white")],
+    )
+    style.map(
+        "Treeview.Heading",
+        relief=[("active", "flat")],
+        background=[("active", _BORDER)],
+    )
+
+    # ── Scrollbars — delgadas y modernas ─────────────────────────────────────
+    _sb = dict(
+        background="#c7ccd6",
+        troughcolor=_BG,
+        arrowcolor=_BG,   # flechas invisibles (mismo color que el trough)
+        borderwidth=0,
+        relief="flat",
+        arrowsize=0,
+    )
+    style.configure("Vertical.TScrollbar", width=7, **_sb)
+    style.configure("Horizontal.TScrollbar", width=7, **_sb)
+    style.map(
+        "Vertical.TScrollbar",
+        background=[("active", _MUTED), ("!active", "#c7ccd6")],
+        troughcolor=[("active", _BG), ("!active", _BG)],
+    )
+    style.map(
+        "Horizontal.TScrollbar",
+        background=[("active", _MUTED), ("!active", "#c7ccd6")],
+        troughcolor=[("active", _BG), ("!active", _BG)],
+    )
+
+    # ── Notebook (tabs) ───────────────────────────────────────────────────────
+    style.configure(
+        "TNotebook",
+        background=_BG,
+        borderwidth=0,
+        tabmargins=[0, 0, 0, 0],
+    )
+    style.configure(
+        "TNotebook.Tab",
+        background=_BORDER,
+        foreground=_MUTED,
+        font=(FONT_FAMILY, 10, "bold"),
+        padding=[16, 8],
+        borderwidth=0,
+    )
+    style.map(
+        "TNotebook.Tab",
+        background=[("selected", _CARD), ("active", "#f3f4f6")],
+        foreground=[("selected", _TEXT), ("active", _TEXT)],
+        expand=[("selected", [1, 1, 1, 0])],
+    )
+
+
+def setup_treeview_tags(tree: ttk.Treeview) -> None:
+    """Configura zebra striping en un Treeview."""
+    tree.tag_configure("odd", background=_CARD)
+    tree.tag_configure("even", background=_ROW_ALT)
+
+
+def insert_striped(tree: ttk.Treeview, row_index: int, values: tuple) -> None:
+    tag = "even" if row_index % 2 == 0 else "odd"
+    tree.insert("", "end", values=values, tags=(tag,))
+
+
+def styled_entry(parent: tk.Widget, **kw) -> tk.Entry:
+    """tk.Entry con colores explícitos — necesario para evitar fondo negro en macOS."""
+    kw.setdefault("bg", _CARD)
+    kw.setdefault("fg", _TEXT)
+    kw.setdefault("insertbackground", _TEXT)
+    kw.setdefault("disabledbackground", _BG)
+    kw.setdefault("relief", "solid")
+    kw.setdefault("bd", 1)
+    kw.setdefault("highlightthickness", 0)
+    return tk.Entry(parent, **kw)
+
+
+def styled_listbox(parent: tk.Widget, **kw) -> tk.Listbox:
+    """tk.Listbox con colores explícitos — necesario para evitar fondo negro en macOS."""
+    kw.setdefault("bg", _CARD)
+    kw.setdefault("fg", _TEXT)
+    kw.setdefault("selectbackground", _ACCENT)
+    kw.setdefault("selectforeground", "white")
+    kw.setdefault("activestyle", "none")
+    kw.setdefault("borderwidth", 0)
+    kw.setdefault("highlightthickness", 0)
+    return tk.Listbox(parent, **kw)
+
+
+def bind_mousewheel(widget: tk.Widget, canvas: tk.Canvas) -> None:
+    """Enlaza scroll del trackpad/mouse al canvas. Funciona en macOS, Windows y Linux."""
+    if sys.platform == "darwin":
+        def _scroll(e):
+            canvas.yview_scroll(int(-1 * e.delta), "units")
+        widget.bind("<MouseWheel>", _scroll)
+    elif sys.platform == "win32":
+        def _scroll(e):
+            canvas.yview_scroll(-1 * (e.delta // 120), "units")
+        widget.bind("<MouseWheel>", _scroll)
+    else:
+        widget.bind("<Button-4>", lambda _e: canvas.yview_scroll(-3, "units"))
+        widget.bind("<Button-5>", lambda _e: canvas.yview_scroll(3, "units"))
+
+
+def bind_mousewheel_recursive(widget: tk.Widget, canvas: tk.Canvas) -> None:
+    """Igual que bind_mousewheel pero también aplica a todos los hijos actuales del widget.
+    Necesario cuando el canvas contiene cards dinámicas cuyos hijos absorben los eventos."""
+    bind_mousewheel(widget, canvas)
+    for child in widget.winfo_children():
+        bind_mousewheel_recursive(child, canvas)
+
+
+def remove_maximize_button(window: tk.Tk) -> None:
+    """Elimina el botón de maximizar grisado en Windows (no aplica en macOS/Linux)."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        GWL_STYLE = -16
+        WS_MAXIMIZEBOX = 0x00010000
+        SWP_FLAGS = 0x0027
+        hwnd = ctypes.windll.user32.FindWindowW(None, window.title())
+        if hwnd:
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, style & ~WS_MAXIMIZEBOX)
+            ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_FLAGS)
+    except Exception:
+        pass
+
 
 class ColorButton(tk.Frame):
-    """tk.Button replacement that respects bg/fg on macOS and Linux."""
+    """tk.Button replacement que respeta bg/fg en macOS y Linux."""
 
     def __init__(
         self,

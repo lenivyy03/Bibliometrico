@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 
-from gui_utils import FONT_FAMILY, ColorButton
+from gui_utils import FONT_FAMILY, ColorButton, bind_mousewheel
 
 BG = "#f5f5f5"
 CARD = "#ffffff"
@@ -77,11 +77,8 @@ class VistaExportar(tk.Frame):
         left_inner.bind("<Configure>", lambda _e: left_canvas.configure(scrollregion=left_canvas.bbox("all")))
         left_canvas.bind("<Configure>", lambda e: left_canvas.itemconfigure(left_win, width=e.width))
 
-        def _scroll_left(e):
-            left_canvas.yview_scroll(-1 * (e.delta // 120), "units")
-
-        left_canvas.bind("<MouseWheel>", _scroll_left)
-        left_inner.bind("<MouseWheel>", _scroll_left)
+        bind_mousewheel(left_canvas, left_canvas)
+        bind_mousewheel(left_inner, left_canvas)
 
         self._item_btns: dict[str, ColorButton] = {}
         for key, label, cat in _ITEMS:
@@ -97,7 +94,7 @@ class VistaExportar(tk.Frame):
             )
             btn.configure(command=lambda k=key: self._toggle(k))
             btn.pack(side="left", padx=(0, 10))
-            btn.bind("<MouseWheel>", _scroll_left)
+            bind_mousewheel(btn, left_canvas)
             self._item_btns[key] = btn
 
             info = tk.Frame(fila, bg=CARD)
@@ -129,8 +126,8 @@ class VistaExportar(tk.Frame):
             right_canvas.itemconfigure(right_win, width=e.width),
             self._update_wraplength(e.width - 40),
         ))
-        right_canvas.bind("<MouseWheel>", lambda e: right_canvas.yview_scroll(-1 * (e.delta // 120), "units"))
-        self._preview_frame.bind("<MouseWheel>", lambda e: right_canvas.yview_scroll(-1 * (e.delta // 120), "units"))
+        bind_mousewheel(right_canvas, right_canvas)
+        bind_mousewheel(self._preview_frame, right_canvas)
         self._right_canvas = right_canvas
         self._preview_frame.grid_columnconfigure(0, weight=1)
         self._preview_wraplength = 340

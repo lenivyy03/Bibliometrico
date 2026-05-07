@@ -4,7 +4,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog, ttk
 
-from gui_utils import FONT_FAMILY, ColorButton
+from gui_utils import FONT_FAMILY, ColorButton, styled_entry
 from compat_imports import load_project_module
 
 carga_mod = load_project_module("carga")
@@ -78,14 +78,7 @@ class VistaCarga(tk.Frame):
         fila.grid_columnconfigure(0, weight=1)
 
         self.ruta_var = tk.StringVar()
-        self.entry_ruta = tk.Entry(
-            fila,
-            textvariable=self.ruta_var,
-            relief="solid",
-            bd=1,
-            highlightthickness=0,
-            font=(FONT_FAMILY, 10),
-        )
+        self.entry_ruta = styled_entry(fila, textvariable=self.ruta_var, font=(FONT_FAMILY, 10))
         self.entry_ruta.grid(row=0, column=0, sticky="ew", ipady=6)
 
         ColorButton(

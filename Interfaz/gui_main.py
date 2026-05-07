@@ -3,7 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from gui_utils import FONT_FAMILY, ColorButton
+from gui_utils import FONT_FAMILY, ColorButton, apply_theme, bind_mousewheel, remove_maximize_button
 from gui_carga import VistaCarga
 from gui_autoria import VistaProductividad, VistaEstadisticasAutoria, VistaTopAutores
 from gui_geografia import VistaPaises, VistaUniversidades
@@ -83,16 +83,10 @@ class AppBibliometrico(tk.Tk):
 
         self.deshabilitar_navegacion()
         self.cambiar_vista("bienvenida")
+        self.after(200, lambda: remove_maximize_button(self))
 
     def _configurar_estilos(self) -> None:
-        estilo = ttk.Style(self)
-        try:
-            estilo.theme_use("clam")
-        except tk.TclError:
-            pass
-        estilo.configure("Treeview", font=(FONT_FAMILY, 10), rowheight=28)
-        estilo.configure("Treeview.Heading", font=(FONT_FAMILY, 10, "bold"))
-        estilo.configure("TNotebook.Tab", padding=(12, 6), font=(FONT_FAMILY, 10, "bold"))
+        apply_theme(self)
 
     def _crear_layout(self) -> None:
         self.body = tk.Frame(self, bg=BG_APP)
@@ -131,13 +125,10 @@ class AppBibliometrico(tk.Tk):
         def _on_nav_canvas_configure(e):
             nav_canvas.itemconfigure(nav_window, width=e.width)
 
-        def _on_mousewheel(e):
-            nav_canvas.yview_scroll(-1 * (e.delta // 120), "units")
-
         nav_inner.bind("<Configure>", _on_nav_inner_configure)
         nav_canvas.bind("<Configure>", _on_nav_canvas_configure)
-        nav_canvas.bind("<MouseWheel>", _on_mousewheel)
-        nav_inner.bind("<MouseWheel>", _on_mousewheel)
+        bind_mousewheel(nav_canvas, nav_canvas)
+        bind_mousewheel(nav_inner, nav_canvas)
 
         secciones = [
             ("PROYECTOS", [("gestion_proyectos", "Gestion de proyectos")]),
@@ -169,7 +160,7 @@ class AppBibliometrico(tk.Tk):
                     borderwidth=0,
                 )
                 boton.pack(fill="x")
-                boton.bind("<MouseWheel>", _on_mousewheel)
+                bind_mousewheel(boton, nav_canvas)
                 self.nav_buttons[nombre] = boton
 
     def _crear_contenido(self) -> None:

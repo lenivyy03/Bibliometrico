@@ -3,7 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from gui_utils import FONT_FAMILY, ColorButton
+from gui_utils import FONT_FAMILY, ColorButton, styled_entry, bind_mousewheel, bind_mousewheel_recursive, setup_treeview_tags, insert_striped
 from compat_imports import load_project_module
 
 conteo_mod = load_project_module("conteo")
@@ -191,7 +191,7 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
         tk.Label(filtro, text="Buscar institución:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
-        tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
         self._btn_exportar_aut = ColorButton(
             filtro, text="Exportar ✓", command=self._toggle_exportar_aut,
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
@@ -213,6 +213,7 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
         )
         self.tree = ttk.Treeview(tabla_card, columns=columnas, show="headings")
         self.tree.grid(row=0, column=0, sticky="nsew")
+        setup_treeview_tags(self.tree)
 
         encabezados = {
             "Universidad_Institucion": "Institución",
@@ -265,19 +266,15 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
         if consulta:
             tabla = tabla[tabla["Universidad_Institucion"].astype(str).str.lower().str.contains(consulta, na=False)]
 
-        for _, fila in tabla.iterrows():
-            self.tree.insert(
-                "",
-                "end",
-                values=(
-                    fila["Universidad_Institucion"],
-                    fila["Total_Articulos"],
-                    fila["Promedio_Autores"],
-                    fila["Maximo_Autores"],
-                    fila["Total_Individuales"],
-                    fila["Total_Colaborativos"],
-                ),
-            )
+        for idx, (_, fila) in enumerate(tabla.iterrows()):
+            insert_striped(self.tree, idx, (
+                fila["Universidad_Institucion"],
+                fila["Total_Articulos"],
+                fila["Promedio_Autores"],
+                fila["Maximo_Autores"],
+                fila["Total_Individuales"],
+                fila["Total_Colaborativos"],
+            ))
 
     def _toggle_exportar_aut(self) -> None:
         if self._tabla_completa is None:
@@ -324,6 +321,8 @@ class VistaTopAutores(_BaseVistaDatos):
         self.canvas_window = self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
         self.inner.bind("<Configure>", self._on_inner_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
+        bind_mousewheel(self.canvas, self.canvas)
+        bind_mousewheel(self.inner, self.canvas)
 
     def _on_inner_configure(self, _event=None) -> None:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -400,6 +399,7 @@ class VistaTopAutores(_BaseVistaDatos):
         )
         boton.configure(command=lambda d=detalle, b=boton: self._toggle_detalle(d, b))
         boton.grid(row=0, column=2, padx=12)
+        bind_mousewheel_recursive(card, self.canvas)
 
     def _toggle_detalle(self, detalle: tk.Frame, boton: tk.Button) -> None:
         if detalle.winfo_ismapped():

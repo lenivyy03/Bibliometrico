@@ -4,7 +4,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
 import webbrowser
-from gui_utils import FONT_FAMILY, ColorButton
+from gui_utils import FONT_FAMILY, ColorButton, styled_entry, bind_mousewheel, bind_mousewheel_recursive, setup_treeview_tags, insert_striped
 from compat_imports import load_project_module
 
 impacto_mod = load_project_module("impacto")
@@ -38,6 +38,8 @@ class ScrollableCanvas(tk.Frame):
         self.window = self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
         self.inner.bind("<Configure>", self._on_inner_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
+        bind_mousewheel(self.canvas, self.canvas)
+        bind_mousewheel(self.inner, self.canvas)
 
     def _on_inner_configure(self, _event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -87,10 +89,17 @@ class _BaseImpacto(tk.Frame):
 
 
 class VistaTrabajosCitados(_BaseImpacto):
+    _BATCH = 100
+
     def __init__(self, parent: tk.Widget, app: tk.Misc):
         super().__init__(parent, app, "Trabajos más citados")
         self.btn_actualizar.configure(command=self.cargar_datos)
         self._datos = []
+        self._datos_filtrados = []
+        self._offset = 0
+        self._cargando_mas = False
+        self._carga_pendiente = False
+        self._nota_widget = None
         self._tooltip_after = None
 
         filtro = tk.Frame(self, bg=BG)
@@ -99,10 +108,19 @@ class VistaTrabajosCitados(_BaseImpacto):
         tk.Label(filtro, text="Buscar referencia:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
-        tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
 
         self.scrollable = ScrollableCanvas(self, bg=BG)
         self.scrollable.grid(row=2, column=0, sticky="nsew", padx=24, pady=(0, 8))
+
+        # Interceptar yscrollcommand para detectar cuando el usuario llega al fondo.
+        # Se difiere _cargar_mas con after() para evitar re-entrancia dentro del callback.
+        def _on_yview(first, last):
+            self.scrollable.scroll.set(first, last)
+            if float(last) >= 0.80 and not self._cargando_mas and not self._carga_pendiente:
+                self._carga_pendiente = True
+                self.after(10, self._trigger_carga)
+        self.scrollable.canvas.configure(yscrollcommand=_on_yview)
 
         self.copy_label = tk.Label(self, text="", bg=BG, fg=ACCENT, font=(FONT_FAMILY, 10, "bold"))
         self.copy_label.grid(row=3, column=0, sticky="w", padx=24, pady=(0, 24))
@@ -132,12 +150,79 @@ class VistaTrabajosCitados(_BaseImpacto):
 
     def aplicar_filtro(self) -> None:
         self.scrollable.clear()
+        self._nota_widget = None
+        self._offset = 0
         consulta = self.busqueda_var.get().strip().lower()
-        datos = self._datos
         if consulta:
-            datos = [item for item in datos if consulta in str(item[0]).lower()]
-        for idx, (referencia, citas) in enumerate(datos, start=1):
+            self._datos_filtrados = [item for item in self._datos if consulta in str(item[0]).lower()]
+        else:
+            self._datos_filtrados = self._datos
+        self._renderizar_lote()
+
+    def _renderizar_lote(self) -> None:
+        lote = self._datos_filtrados[self._offset: self._offset + self._BATCH]
+        for idx, (referencia, citas) in enumerate(lote, start=self._offset + 1):
             self._agregar_item(idx, referencia, citas)
+        self._offset += len(lote)
+        # Forzar recálculo de geometría antes de actualizar scrollregion
+        self.scrollable.inner.update_idletasks()
+        self.scrollable.canvas.configure(scrollregion=self.scrollable.canvas.bbox("all"))
+        self._actualizar_nota()
+
+    def _trigger_carga(self) -> None:
+        """Punto de entrada diferido desde _on_yview (evita re-entrancia en yscrollcommand)."""
+        self._carga_pendiente = False
+        self._cargar_mas()
+
+    def _cargar_mas(self) -> None:
+        if self._cargando_mas or self._offset >= len(self._datos_filtrados):
+            return
+        self._cargando_mas = True
+        try:
+            if self._nota_widget is not None:
+                try:
+                    self._nota_widget.destroy()
+                except tk.TclError:
+                    pass
+                self._nota_widget = None
+            self._renderizar_lote()
+        finally:
+            self._cargando_mas = False
+
+    def _actualizar_nota(self) -> None:
+        if self._nota_widget is not None:
+            try:
+                self._nota_widget.destroy()
+            except tk.TclError:
+                pass
+            self._nota_widget = None
+        restantes = len(self._datos_filtrados) - self._offset
+        if restantes <= 0:
+            # Mostrar fin de lista cuando ya no hay más datos
+            self._nota_widget = tk.Label(
+                self.scrollable.inner,
+                text=f"— Fin de la lista · {self._offset} trabajos citados en total —",
+                bg=BG, fg=MUTED,
+                font=(FONT_FAMILY, 10),
+                anchor="center",
+                pady=12,
+            )
+            self._nota_widget.pack(fill="x", pady=(4, 16))
+            bind_mousewheel(self._nota_widget, self.scrollable.canvas)
+            return
+        texto = f"Cargar {min(restantes, self._BATCH)} más  ({self._offset} de {len(self._datos_filtrados)} mostrados)"
+        self._nota_widget = ColorButton(
+            self.scrollable.inner,
+            text=texto,
+            command=self._cargar_mas,
+            bg="#ede9fe",
+            fg=ACCENT,
+            activebackground="#ddd6fe",
+            font=(FONT_FAMILY, 10, "bold"),
+            pady=10,
+        )
+        self._nota_widget.pack(fill="x", pady=(8, 4))
+        bind_mousewheel_recursive(self._nota_widget, self.scrollable.canvas)
 
     def _agregar_item(self, indice: int, referencia: str, citas: int) -> None:
         card = tk.Frame(self.scrollable.inner, bg=CARD, highlightbackground=BORDER, highlightthickness=1, cursor="hand2")
@@ -149,6 +234,7 @@ class VistaTrabajosCitados(_BaseImpacto):
 
         for widget in (card, titulo, detalle):
             widget.bind("<Button-1>", lambda _e, ref=referencia: self._copiar_referencia(ref))
+        bind_mousewheel_recursive(card, self.scrollable.canvas)
 
     def _copiar_referencia(self, referencia: str) -> None:
         self.clipboard_clear()
@@ -176,7 +262,7 @@ class VistaPromedioCitas(_BaseImpacto):
         tk.Label(filtro, text="Filtrar por título:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
-        tk.Entry(filtro, textvariable=self.busqueda_var, relief="solid", bd=1, highlightthickness=0).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
         self._btn_exportar_citas = ColorButton(
             filtro, text="Exportar ✓", command=self._toggle_exportar_citas,
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
@@ -191,6 +277,7 @@ class VistaPromedioCitas(_BaseImpacto):
 
         self.tree = ttk.Treeview(tabla_card, columns=("Title", "Year", "Promedio_Citas_Anual"), show="headings")
         self.tree.grid(row=0, column=0, sticky="nsew")
+        setup_treeview_tags(self.tree)
         headers = {
             "Title": "Título",
             "Year": "Año",
@@ -239,11 +326,11 @@ class VistaPromedioCitas(_BaseImpacto):
         consulta = self.busqueda_var.get().strip().lower()
         if consulta:
             tabla = tabla[tabla["Title"].astype(str).str.lower().str.contains(consulta, na=False)]
-        for _, fila in tabla.iterrows():
+        for idx, (_, fila) in enumerate(tabla.iterrows()):
             titulo = str(fila["Title"])
             if len(titulo) > 90:
                 titulo = titulo[:87] + "…"
-            self.tree.insert("", "end", values=(titulo, fila["Year"], fila["Promedio_Citas_Anual"]))
+            insert_striped(self.tree, idx, (titulo, fila["Year"], fila["Promedio_Citas_Anual"]))
         self._actualizar_resumen(tabla)
 
     def ordenar_por(self, columna: str) -> None:
@@ -345,6 +432,7 @@ class VistaTop10Trabajos(_BaseImpacto):
             enlace.bind("<Button-1>", lambda _e, value=doi: webbrowser.open(f"https://doi.org/{value}"))
         else:
             tk.Label(card, text="Sin DOI", bg=CARD, fg="#9ca3af", font=(FONT_FAMILY, 10)).pack(anchor="w", padx=16, pady=(0, 12))
+        bind_mousewheel_recursive(card, self.scrollable.canvas)
 
     def _toggle_exportar_top_trab(self) -> None:
         if not self._datos:

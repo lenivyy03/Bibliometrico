@@ -6,7 +6,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 
-from gui_utils import FONT_FAMILY, ColorButton, bind_mousewheel
+from gui_utils import (FONT_FAMILY, FONT_SM, FONT_MD, FONT_LG, PAD_HEADER, PAD_CARD,
+                       ColorButton, bind_mousewheel)
 
 BG = "#f5f5f5"
 CARD = "#ffffff"
@@ -40,14 +41,14 @@ class VistaExportar(tk.Frame):
 
         # Header
         head = tk.Frame(self, bg=BG)
-        head.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 10))
+        head.grid(row=0, column=0, sticky="ew", padx=24, pady=PAD_HEADER)
         head.grid_columnconfigure(0, weight=1)
         tk.Label(head, text="Exportar", bg=BG, fg=TEXT,
-                 font=(FONT_FAMILY, 20, "bold")).grid(row=0, column=0, sticky="w")
+                 font=(FONT_FAMILY, FONT_LG, "bold")).grid(row=0, column=0, sticky="w")
         tk.Label(
             head,
             text="Selecciona las secciones a incluir. Puedes marcarlas desde cada sección o directamente aquí.",
-            bg=BG, fg=MUTED, font=(FONT_FAMILY, 10),
+            bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_SM),
         ).grid(row=1, column=0, sticky="w")
 
         # Body: left list + right preview
@@ -63,19 +64,19 @@ class VistaExportar(tk.Frame):
         left_outer.grid_columnconfigure(0, weight=1)
 
         tk.Label(left_outer, text="Secciones disponibles", bg=CARD, fg=TEXT,
-                 font=(FONT_FAMILY, 11, "bold")).pack(anchor="w", padx=16, pady=(14, 6))
+                 font=(FONT_FAMILY, FONT_MD, "bold")).pack(anchor="w", padx=16, pady=(10, 4))
 
         self._item_btns: dict[str, ColorButton] = {}
         for key, label, cat in _ITEMS:
             fila = tk.Frame(left_outer, bg=CARD)
-            fila.pack(fill="x", padx=12, pady=4)
+            fila.pack(fill="x", padx=12, pady=PAD_CARD)
 
             btn = ColorButton(
                 fila, text="○",
                 bg="#f3f4f6", fg=MUTED,
                 relief="flat", cursor="hand2",
-                font=(FONT_FAMILY, 13, "bold"),
-                padx=8, pady=3, width=2,
+                font=(FONT_FAMILY, FONT_MD + 1, "bold"),
+                padx=6, pady=2, width=2,
             )
             btn.configure(command=lambda k=key: self._toggle(k))
             btn.pack(side="left", padx=(0, 10))
@@ -84,9 +85,9 @@ class VistaExportar(tk.Frame):
             info = tk.Frame(fila, bg=CARD)
             info.pack(side="left", fill="x", expand=True)
             tk.Label(info, text=label, bg=CARD, fg=TEXT,
-                     font=(FONT_FAMILY, 10, "bold"), anchor="w").pack(anchor="w")
+                     font=(FONT_FAMILY, FONT_MD, "bold"), anchor="w").pack(anchor="w")
             tk.Label(info, text=cat, bg=CARD, fg=MUTED,
-                     font=(FONT_FAMILY, 9), anchor="w").pack(anchor="w")
+                     font=(FONT_FAMILY, FONT_SM), anchor="w").pack(anchor="w")
 
         # ── Right panel — scrollable preview ────────────────────────────────
         right_outer = tk.Frame(body, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
@@ -95,7 +96,7 @@ class VistaExportar(tk.Frame):
         right_outer.grid_rowconfigure(1, weight=1)
 
         tk.Label(right_outer, text="Vista previa del reporte", bg=CARD, fg=TEXT,
-                 font=(FONT_FAMILY, 11, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
+                 font=(FONT_FAMILY, FONT_MD, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(10, 6))
 
         right_canvas = tk.Canvas(right_outer, bg=CARD, highlightthickness=0)
         right_canvas.grid(row=1, column=0, sticky="nsew")

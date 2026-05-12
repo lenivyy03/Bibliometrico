@@ -4,7 +4,8 @@ import os
 import tkinter as tk
 from tkinter import filedialog, ttk
 
-from gui_utils import FONT_FAMILY, ColorButton, styled_entry
+from gui_utils import (FONT_FAMILY, FONT_SM, FONT_MD, FONT_LG, PAD_HEADER, PAD_ENTRY,
+                       ColorButton, styled_entry)
 from compat_imports import load_project_module
 
 carga_mod = load_project_module("carga")
@@ -41,7 +42,7 @@ class VistaCarga(tk.Frame):
 
     def _crear_encabezado(self) -> None:
         encabezado = tk.Frame(self, bg=BG)
-        encabezado.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 8))
+        encabezado.grid(row=0, column=0, sticky="ew", padx=24, pady=PAD_HEADER)
         encabezado.grid_columnconfigure(0, weight=1)
 
         tk.Label(
@@ -49,7 +50,7 @@ class VistaCarga(tk.Frame):
             text="Cargar archivo CSV",
             bg=BG,
             fg=TEXT,
-            font=(FONT_FAMILY, 20, "bold"),
+            font=(FONT_FAMILY, FONT_LG, "bold"),
         ).grid(row=0, column=0, sticky="w")
 
         tk.Label(
@@ -57,7 +58,7 @@ class VistaCarga(tk.Frame):
             text="Importa un archivo exportado desde Scopus para habilitar el análisis.",
             bg=BG,
             fg=MUTED,
-            font=(FONT_FAMILY, 10),
+            font=(FONT_FAMILY, FONT_MD),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
     def _crear_formulario(self) -> None:
@@ -70,7 +71,7 @@ class VistaCarga(tk.Frame):
             text="Ruta del archivo",
             bg=CARD,
             fg=TEXT,
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, FONT_MD, "bold"),
         ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
 
         fila = tk.Frame(formulario, bg=CARD)
@@ -78,8 +79,8 @@ class VistaCarga(tk.Frame):
         fila.grid_columnconfigure(0, weight=1)
 
         self.ruta_var = tk.StringVar()
-        self.entry_ruta = styled_entry(fila, textvariable=self.ruta_var, font=(FONT_FAMILY, 10))
-        self.entry_ruta.grid(row=0, column=0, sticky="ew", ipady=6)
+        self.entry_ruta = styled_entry(fila, textvariable=self.ruta_var, font=(FONT_FAMILY, FONT_MD))
+        self.entry_ruta.grid(row=0, column=0, sticky="ew", ipady=PAD_ENTRY)
 
         ColorButton(
             fila,
@@ -90,7 +91,7 @@ class VistaCarga(tk.Frame):
             relief="flat",
             activebackground="#ddd6fe",
             cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, FONT_MD, "bold"),
             padx=14,
             pady=6,
         ).grid(row=0, column=1, padx=(10, 0))
@@ -107,7 +108,7 @@ class VistaCarga(tk.Frame):
             relief="flat",
             activebackground="#6d28d9",
             cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, FONT_MD, "bold"),
             padx=18,
             pady=8,
         ).pack(side="left")
@@ -121,7 +122,7 @@ class VistaCarga(tk.Frame):
             relief="flat",
             activebackground="#e5e7eb",
             cursor="hand2",
-            font=(FONT_FAMILY, 10),
+            font=(FONT_FAMILY, FONT_MD),
             padx=18,
             pady=8,
         ).pack(side="left", padx=(10, 0))
@@ -138,7 +139,7 @@ class VistaCarga(tk.Frame):
             fg=TEXT,
             justify="left",
             anchor="w",
-            font=(FONT_FAMILY, 10),
+            font=(FONT_FAMILY, FONT_MD),
             wraplength=780,
         )
         self.mensaje_label.grid(row=0, column=0, sticky="ew")
@@ -159,7 +160,7 @@ class VistaCarga(tk.Frame):
             activebackground=WARN_BG,
             activeforeground=WARN,
             cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, FONT_MD, "bold"),
             padx=4,
             pady=4,
         )
@@ -170,7 +171,7 @@ class VistaCarga(tk.Frame):
             text="",
             bg=WARN_BG,
             fg=WARN,
-            font=(FONT_FAMILY, 10),
+            font=(FONT_FAMILY, FONT_MD),
             justify="left",
             anchor="w",
             wraplength=720,
@@ -188,7 +189,7 @@ class VistaCarga(tk.Frame):
             fg=WARN,
             justify="left",
             anchor="w",
-            font=(FONT_FAMILY, 10),
+            font=(FONT_FAMILY, FONT_MD),
             wraplength=760,
         )
         self.detalles_label.pack(fill="x")
@@ -204,7 +205,7 @@ class VistaCarga(tk.Frame):
             text="Vista previa",
             bg=CARD,
             fg=TEXT,
-            font=(FONT_FAMILY, 12, "bold"),
+            font=(FONT_FAMILY, FONT_MD + 2, "bold"),
         ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
 
         tabla_frame = tk.Frame(contenedor, bg=CARD)

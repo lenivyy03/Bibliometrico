@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from gui_utils import FONT_FAMILY, ColorButton, styled_entry, styled_listbox, setup_treeview_tags, insert_striped
+from gui_utils import (FONT_FAMILY, FONT_SM, FONT_MD, FONT_LG, PAD_HEADER, PAD_ENTRY,
+                       ColorButton, styled_entry, styled_listbox, setup_treeview_tags, insert_striped)
 from compat_imports import load_project_module
 
 paises_mod = load_project_module("tops")
@@ -31,9 +32,9 @@ class _BaseVistaGeo(tk.Frame):
         self.grid_rowconfigure(2, weight=1)
 
         head = tk.Frame(self, bg=BG)
-        head.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 10))
+        head.grid(row=0, column=0, sticky="ew", padx=24, pady=PAD_HEADER)
         head.grid_columnconfigure(0, weight=1)
-        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, FONT_LG, "bold")).grid(row=0, column=0, sticky="w")
         self.btn_actualizar = ColorButton(
             head,
             text="Actualizar",
@@ -42,14 +43,14 @@ class _BaseVistaGeo(tk.Frame):
             relief="flat",
             activebackground="#ddd6fe",
             cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, FONT_MD, "bold"),
             padx=14,
             pady=8,
         )
         self.btn_actualizar.grid(row=0, column=1, sticky="e")
-        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
+        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
         self.status_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
-        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, 10), wraplength=780, justify="left")
+        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, FONT_MD), wraplength=780, justify="left")
         self.error_label.grid(row=2, column=0, columnspan=2, sticky="w")
 
     def _set_status(self, texto: str = "") -> None:
@@ -74,18 +75,18 @@ class VistaPaises(_BaseVistaGeo):
         resumen = tk.Frame(self, bg=BG)
         resumen.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 10))
         resumen.grid_columnconfigure(1, weight=1)
-        self.lbl_total_paises = tk.Label(resumen, text="Países únicos: —", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold"))
+        self.lbl_total_paises = tk.Label(resumen, text="Países únicos: —", bg=BG, fg=TEXT, font=(FONT_FAMILY, FONT_MD, "bold"))
         self.lbl_total_paises.grid(row=0, column=0, sticky="w")
-        self.lbl_total_articulos = tk.Label(resumen, text="Artículos con afiliación: —", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
+        self.lbl_total_articulos = tk.Label(resumen, text="Artículos con afiliación: —", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
         self.lbl_total_articulos.grid(row=0, column=1, sticky="w", padx=(20, 0))
 
         filtro = tk.Frame(self, bg=BG)
         filtro.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 10))
         filtro.grid_columnconfigure(1, weight=1)
-        tk.Label(filtro, text="Buscar país:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(filtro, text="Buscar país:", bg=BG, fg=TEXT, font=(FONT_FAMILY, FONT_MD, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
-        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, FONT_MD)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=PAD_ENTRY)
         self._btn_exportar_paises = ColorButton(
             filtro, text="Exportar ✓", command=self._toggle_exportar_paises,
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
@@ -110,7 +111,7 @@ class VistaPaises(_BaseVistaGeo):
         self.tree.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
 
-        self.porcentaje_label = tk.Label(self, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
+        self.porcentaje_label = tk.Label(self, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
         self.porcentaje_label.grid(row=4, column=0, sticky="w", padx=24, pady=(0, 24))
 
     def cargar_datos(self) -> None:
@@ -229,8 +230,8 @@ class VistaUniversidades(_BaseVistaGeo):
         detalle_card.grid(row=0, column=1, sticky="nsew", pady=10)
         detalle_card.grid_rowconfigure(1, weight=1)
         detalle_card.grid_columnconfigure(0, weight=1)
-        tk.Label(detalle_card, text="Artículos de la universidad seleccionada", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 12, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
-        self.listbox_titulos = styled_listbox(detalle_card, font=(FONT_FAMILY, 10))
+        tk.Label(detalle_card, text="Artículos de la universidad seleccionada", bg=CARD, fg=TEXT, font=(FONT_FAMILY, FONT_MD + 2, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
+        self.listbox_titulos = styled_listbox(detalle_card, font=(FONT_FAMILY, FONT_MD))
         self.listbox_titulos.grid(row=1, column=0, sticky="nsew", padx=(16, 0), pady=(0, 16))
         scroll_list = ttk.Scrollbar(detalle_card, orient="vertical", command=self.listbox_titulos.yview)
         self.listbox_titulos.configure(yscrollcommand=scroll_list.set)
@@ -259,8 +260,8 @@ class VistaUniversidades(_BaseVistaGeo):
             ("Citas máx.", self.var_citas_max),
         ]
         for idx, (titulo, variable) in enumerate(campos):
-            tk.Label(filtros, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=idx * 2, sticky="w")
-            styled_entry(filtros, textvariable=variable, font=(FONT_FAMILY, 10)).grid(row=0, column=idx * 2 + 1, sticky="ew", padx=(6, 12), ipady=5)
+            tk.Label(filtros, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, FONT_MD, "bold")).grid(row=0, column=idx * 2, sticky="w")
+            styled_entry(filtros, textvariable=variable, font=(FONT_FAMILY, FONT_MD)).grid(row=0, column=idx * 2 + 1, sticky="ew", padx=(6, 12), ipady=PAD_ENTRY)
 
         botones = tk.Frame(self.tab_top, bg=BG)
         botones.grid(row=1, column=0, sticky="nw", pady=(0, 10))

@@ -11,6 +11,49 @@ elif sys.platform == "darwin":
 else:
     FONT_FAMILY = "DejaVu Sans"
 
+# ── Espaciado por plataforma ─────────────────────────────────────────────────
+# Segoe UI (Windows) es más alta verticalmente que Helvetica Neue (macOS),
+# por lo que se reducen paddings en Windows para compensar.
+if sys.platform == "win32":
+    PAD_SECTION = (8, 1)    # pady de labels de sección del sidebar
+    PAD_BTN = 2             # pady interno de botones del sidebar
+    PAD_HEADER = (18, 6)    # pady del header principal de cada vista
+    PAD_CARD = 3            # pady entre cards/items en listas
+    PAD_ENTRY = 4           # ipady de entries
+    FONT_SM = 9             # fuente pequeña (subtítulos, categorías)
+    FONT_MD = 10            # fuente mediana (cuerpo)
+    FONT_LG = 18            # fuente grande (títulos de vista)
+    FONT_SIDEBAR_TITLE = 14 # título del sidebar
+    ROW_HEIGHT = 24         # altura de filas en Treeview
+    TAB_PAD = [12, 6]       # padding de pestañas Notebook
+    HEADING_PAD = (8, 6)    # padding de encabezados Treeview
+elif sys.platform == "darwin":
+    PAD_SECTION = (12, 2)
+    PAD_BTN = 4
+    PAD_HEADER = (24, 10)
+    PAD_CARD = 4
+    PAD_ENTRY = 6
+    FONT_SM = 9
+    FONT_MD = 10
+    FONT_LG = 20
+    FONT_SIDEBAR_TITLE = 16
+    ROW_HEIGHT = 28
+    TAB_PAD = [16, 8]
+    HEADING_PAD = (8, 6)
+else:
+    PAD_SECTION = (10, 2)
+    PAD_BTN = 3
+    PAD_HEADER = (20, 8)
+    PAD_CARD = 4
+    PAD_ENTRY = 5
+    FONT_SM = 9
+    FONT_MD = 10
+    FONT_LG = 19
+    FONT_SIDEBAR_TITLE = 15
+    ROW_HEIGHT = 26
+    TAB_PAD = [14, 7]
+    HEADING_PAD = (8, 6)
+
 _ACCENT = "#7c3aed"
 _BG = "#f5f5f5"
 _CARD = "#ffffff"
@@ -34,8 +77,8 @@ def apply_theme(root: tk.Misc) -> None:
         background=_CARD,
         foreground=_TEXT,
         fieldbackground=_CARD,
-        font=(FONT_FAMILY, 10),
-        rowheight=28,
+        font=(FONT_FAMILY, FONT_MD),
+        rowheight=ROW_HEIGHT,
         borderwidth=0,
         relief="flat",
     )
@@ -43,10 +86,10 @@ def apply_theme(root: tk.Misc) -> None:
         "Treeview.Heading",
         background=_BG,
         foreground=_TEXT,
-        font=(FONT_FAMILY, 10, "bold"),
+        font=(FONT_FAMILY, FONT_MD, "bold"),
         relief="flat",
         borderwidth=0,
-        padding=(8, 6),
+        padding=HEADING_PAD,
     )
     style.map(
         "Treeview",
@@ -98,8 +141,8 @@ def apply_theme(root: tk.Misc) -> None:
         "TNotebook.Tab",
         background=_BORDER,
         foreground=_MUTED,
-        font=(FONT_FAMILY, 10, "bold"),
-        padding=[16, 8],
+        font=(FONT_FAMILY, FONT_MD, "bold"),
+        padding=TAB_PAD,
         borderwidth=0,
     )
     style.map(

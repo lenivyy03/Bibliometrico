@@ -3,7 +3,8 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from gui_utils import FONT_FAMILY, ColorButton, styled_entry, bind_mousewheel, bind_mousewheel_recursive, setup_treeview_tags, insert_striped
+from gui_utils import (FONT_FAMILY, FONT_SM, FONT_MD, FONT_LG, PAD_HEADER, PAD_CARD, PAD_ENTRY,
+                       ColorButton, styled_entry, bind_mousewheel, bind_mousewheel_recursive, setup_treeview_tags, insert_striped)
 from compat_imports import load_project_module
 
 conteo_mod = load_project_module("conteo")
@@ -34,7 +35,7 @@ class TarjetaMetrica(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
         self.valor = tk.Label(self, text="—", bg=CARD, fg=TEXT, font=(FONT_FAMILY, 24, "bold"))
         self.valor.grid(row=0, column=0, padx=18, pady=(14, 2))
-        self.titulo = tk.Label(self, text=titulo, bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10))
+        self.titulo = tk.Label(self, text=titulo, bg=CARD, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
         self.titulo.grid(row=1, column=0, padx=18, pady=(0, 14))
 
     def actualizar(self, valor: str) -> None:
@@ -51,9 +52,9 @@ class _BaseVistaDatos(tk.Frame):
 
     def _crear_header(self, titulo: str) -> None:
         head = tk.Frame(self, bg=BG)
-        head.grid(row=0, column=0, sticky="ew", padx=24, pady=(24, 10))
+        head.grid(row=0, column=0, sticky="ew", padx=24, pady=PAD_HEADER)
         head.grid_columnconfigure(0, weight=1)
-        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(head, text=titulo, bg=BG, fg=TEXT, font=(FONT_FAMILY, FONT_LG, "bold")).grid(row=0, column=0, sticky="w")
         self.btn_actualizar = ColorButton(
             head,
             text="Actualizar",
@@ -62,16 +63,16 @@ class _BaseVistaDatos(tk.Frame):
             relief="flat",
             activebackground="#ddd6fe",
             cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"),
+            font=(FONT_FAMILY, FONT_MD, "bold"),
             padx=14,
             pady=8,
         )
         self.btn_actualizar.grid(row=0, column=1, sticky="e")
 
-        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
+        self.status_label = tk.Label(head, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
         self.status_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
-        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, 10), wraplength=780, justify="left")
+        self.error_label = tk.Label(head, text="", bg=BG, fg=ERROR, font=(FONT_FAMILY, FONT_MD), wraplength=780, justify="left")
         self.error_label.grid(row=2, column=0, columnspan=2, sticky="w")
 
     def _set_status(self, texto: str = "") -> None:
@@ -118,7 +119,7 @@ class VistaProductividad(_BaseVistaDatos):
             text="Resumen consolidado de productividad para el archivo cargado.",
             bg=BG,
             fg=MUTED,
-            font=(FONT_FAMILY, 10),
+            font=(FONT_FAMILY, FONT_MD),
         )
         info.grid(row=3, column=0, sticky="nw", padx=24, pady=(4, 0))
 
@@ -188,10 +189,10 @@ class VistaEstadisticasAutoria(_BaseVistaDatos):
         filtro = tk.Frame(cuerpo, bg=BG)
         filtro.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         filtro.grid_columnconfigure(1, weight=1)
-        tk.Label(filtro, text="Buscar institución:", bg=BG, fg=TEXT, font=(FONT_FAMILY, 10, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(filtro, text="Buscar institución:", bg=BG, fg=TEXT, font=(FONT_FAMILY, FONT_MD, "bold")).grid(row=0, column=0, sticky="w")
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
-        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, 10)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=6)
+        styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, FONT_MD)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=PAD_ENTRY)
         self._btn_exportar_aut = ColorButton(
             filtro, text="Exportar ✓", command=self._toggle_exportar_aut,
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
@@ -362,15 +363,15 @@ class VistaTopAutores(_BaseVistaDatos):
 
     def _agregar_card(self, posicion: int, nombre: str, publicaciones: int, titulos: list[str]) -> None:
         card = tk.Frame(self.inner, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
-        card.pack(fill="x", pady=6)
+        card.pack(fill="x", pady=PAD_CARD)
         card.grid_columnconfigure(1, weight=1)
 
-        tk.Label(card, text=f"{posicion:02}", bg="#ede9fe", fg=ACCENT, font=(FONT_FAMILY, 11, "bold"), width=4).grid(row=0, column=0, padx=12, pady=12)
+        tk.Label(card, text=f"{posicion:02}", bg="#ede9fe", fg=ACCENT, font=(FONT_FAMILY, FONT_MD + 1, "bold"), width=4).grid(row=0, column=0, padx=12, pady=12)
         info = tk.Frame(card, bg=CARD)
         info.grid(row=0, column=1, sticky="ew", pady=12)
         info.grid_columnconfigure(0, weight=1)
-        tk.Label(info, text=nombre, bg=CARD, fg=TEXT, font=(FONT_FAMILY, 11, "bold"), anchor="w").grid(row=0, column=0, sticky="w")
-        tk.Label(info, text=f"{publicaciones} publicaciones", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10)).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        tk.Label(info, text=nombre, bg=CARD, fg=TEXT, font=(FONT_FAMILY, FONT_MD + 1, "bold"), anchor="w").grid(row=0, column=0, sticky="w")
+        tk.Label(info, text=f"{publicaciones} publicaciones", bg=CARD, fg=MUTED, font=(FONT_FAMILY, FONT_MD)).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
         detalle = tk.Frame(card, bg="#fafafa")
         detalle.grid(row=1, column=0, columnspan=3, sticky="ew", padx=12, pady=(0, 12))
@@ -384,7 +385,7 @@ class VistaTopAutores(_BaseVistaDatos):
                 anchor="w",
                 justify="left",
                 wraplength=720,
-                font=(FONT_FAMILY, 10),
+                font=(FONT_FAMILY, FONT_MD),
             ).pack(fill="x", pady=2)
 
         boton = ColorButton(

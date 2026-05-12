@@ -3,7 +3,9 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from gui_utils import FONT_FAMILY, ColorButton, apply_theme, bind_mousewheel, remove_maximize_button
+from gui_utils import (FONT_FAMILY, FONT_SM, FONT_MD, FONT_LG, FONT_SIDEBAR_TITLE,
+                       PAD_SECTION, PAD_BTN, PAD_HEADER,
+                       ColorButton, apply_theme, bind_mousewheel, remove_maximize_button)
 from gui_carga import VistaCarga
 from gui_autoria import VistaProductividad, VistaEstadisticasAutoria, VistaTopAutores
 from gui_geografia import VistaPaises, VistaUniversidades
@@ -109,8 +111,8 @@ class AppBibliometrico(tk.Tk):
 
     def _crear_sidebar(self) -> None:
         # Logo fijo (no se desplaza)
-        tk.Label(self.sidebar, text="BIBLIOMÉTRICO", bg=SIDEBAR, fg="white", font=(FONT_FAMILY, 16, "bold")).pack(anchor="w", padx=18, pady=(18, 6))
-        tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 10)).pack(anchor="w", padx=18, pady=(0, 10))
+        tk.Label(self.sidebar, text="BIBLIOMÉTRICO", bg=SIDEBAR, fg="white", font=(FONT_FAMILY, FONT_SIDEBAR_TITLE, "bold")).pack(anchor="w", padx=18, pady=(14, 4))
+        tk.Label(self.sidebar, text="Análisis bibliométrico", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, FONT_SM)).pack(anchor="w", padx=18, pady=(0, 6))
 
         # Canvas scrollable para la navegación
         nav_canvas = tk.Canvas(self.sidebar, bg=SIDEBAR, highlightthickness=0)
@@ -139,7 +141,7 @@ class AppBibliometrico(tk.Tk):
         ]
 
         for titulo, botones in secciones:
-            tk.Label(nav_inner, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(12, 2))
+            tk.Label(nav_inner, text=titulo, bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, FONT_SM, "bold")).pack(anchor="w", padx=18, pady=PAD_SECTION)
             for nombre, texto in botones:
                 boton = ColorButton(
                     nav_inner,
@@ -153,8 +155,8 @@ class AppBibliometrico(tk.Tk):
                     anchor="w",
                     cursor="hand2",
                     padx=18,
-                    pady=4,
-                    font=(FONT_FAMILY, 10),
+                    pady=PAD_BTN,
+                    font=(FONT_FAMILY, FONT_MD),
                     disabledforeground="#6b7280",
                     borderwidth=0,
                 )
@@ -176,13 +178,13 @@ class AppBibliometrico(tk.Tk):
             anchor="w",
             cursor="hand2",
             padx=18,
-            pady=12,
-            font=(FONT_FAMILY, 10),
+            pady=PAD_BTN + 4,
+            font=(FONT_FAMILY, FONT_MD),
             disabledforeground="#6b7280",
             borderwidth=0,
         )
         exportar_btn.pack(fill="x", side="bottom")
-        tk.Label(self.sidebar, text="EXPORTAR", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, 9, "bold")).pack(anchor="w", padx=18, pady=(8, 2), side="bottom")
+        tk.Label(self.sidebar, text="EXPORTAR", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=(FONT_FAMILY, FONT_SM, "bold")).pack(anchor="w", padx=18, pady=PAD_SECTION, side="bottom")
         self.nav_buttons["exportar"] = exportar_btn
 
     def _crear_contenido(self) -> None:
@@ -207,10 +209,10 @@ class AppBibliometrico(tk.Tk):
     def _crear_barra_estado(self) -> None:
         barra = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         barra.pack(fill="x", side="bottom")
-        self.lbl_archivo = tk.Label(barra, text="Sin archivo cargado", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10))
-        self.lbl_archivo.pack(side="left", padx=16, pady=8)
-        self.lbl_registros = tk.Label(barra, text="0 registros", bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10, "bold"))
-        self.lbl_registros.pack(side="right", padx=16, pady=8)
+        self.lbl_archivo = tk.Label(barra, text="Sin archivo cargado", bg=CARD, fg=MUTED, font=(FONT_FAMILY, FONT_SM))
+        self.lbl_archivo.pack(side="left", padx=16, pady=6)
+        self.lbl_registros = tk.Label(barra, text="0 registros", bg=CARD, fg=MUTED, font=(FONT_FAMILY, FONT_SM, "bold"))
+        self.lbl_registros.pack(side="right", padx=16, pady=6)
 
     def cambiar_vista(self, nombre_vista: str) -> None:
         vistas_siempre_activas = ["carga", "bienvenida", "gestion_proyectos"]

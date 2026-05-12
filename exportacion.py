@@ -1,5 +1,20 @@
 import pandas as pd
-from docx import Document
+
+try:
+    from docx import Document as _DocxDocument
+    _DOCX_OK = True
+except ImportError:
+    _DOCX_OK = False
+
+
+def _get_docx_document():
+    """Obtiene la clase Document de python-docx o lanza error descriptivo."""
+    if not _DOCX_OK:
+        raise ImportError(
+            "La librería python-docx no está instalada.\n"
+            "Instálala con: pip install python-docx"
+        )
+    return _DocxDocument
 
 
 # --- Exportar Universidades (Historia 24 y 40) ---
@@ -190,7 +205,7 @@ def exportar_resultados(df: pd.DataFrame, nom_metrica: str, formato: str) -> boo
         archivos_guardados.append(nom_archivo_excel)
 
     if formato == 'word' or formato == 'ambos':
-        doc = Document()
+        doc = _get_docx_document()()
         doc.add_heading(f"Resultados del análisis: {nom_metrica}", level=1)
 
         tabla_de_word = doc.add_table(rows=1, cols=df.shape[1])
@@ -215,34 +230,45 @@ def exportar_resultados(df: pd.DataFrame, nom_metrica: str, formato: str) -> boo
     return True
 
 
-# --- Exportar Top 10 Autores (Historia 36) ---
+# --- Exportar Top 10 Autores (Historias 36 y 53) ---
+# Formato expandido: una fila por título
+# Col A: Nombre del autor
+# Col B: Título del artículo
+# Col C: Total de artículos del autor (repetido en cada fila)
 
 def exportar_top_10_autores(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty or 'Authors' not in df.columns or 'Title' not in df.columns:
         return pd.DataFrame()
 
+    # Construir tabla plana: un par (autor, título) por fila
     datos = []
     for _, fila in df.dropna(subset=['Authors', 'Title']).iterrows():
-        autores = str(fila['Authors']).split(';')
         titulo = str(fila['Title']).strip()
-
-        for autor in autores:
+        for autor in str(fila['Authors']).split(';'):
             autor = autor.strip()
             if autor:
-                datos.append({'Autor': autor, 'Título': titulo})
+                datos.append({'Autor': autor, 'Título del artículo': titulo})
 
-    df_autores = pd.DataFrame(datos)
+    if not datos:
+        return pd.DataFrame()
 
-    df_agrupado = df_autores.groupby('Autor').agg(
-        numero_articulos=('Título', 'count'),
-        titulos_unidos=('Título', lambda x: " | ".join(x.unique()))
-    ).reset_index()
+    df_plano = pd.DataFrame(datos)
 
-    df_top = df_agrupado.sort_values(by='numero_articulos', ascending=False).head(10)
-    df_top = df_top.rename(columns={
-        'numero_articulos': 'Número de artículos',
-        'titulos_unidos': 'Títulos'
-    })
+    # Contar artículos únicos por autor y determinar el top 10
+    conteos = df_plano.groupby('Autor')['Título del artículo'].nunique()
+    top_10_autores = conteos.nlargest(10).index
+    df_top = df_plano[df_plano['Autor'].isin(top_10_autores)].copy()
+
+    # Añadir columna C con el total de artículos por autor
+    df_top['Total artículos'] = df_top['Autor'].map(conteos)
+
+    # Ordenar: primero por total desc, luego por autor asc
+    df_top = df_top.sort_values(
+        by=['Total artículos', 'Autor'],
+        ascending=[False, True]
+    ).reset_index(drop=True)
+
+    df_top = df_top[['Autor', 'Título del artículo', 'Total artículos']]
 
     archivo = "Los 10 autores mas destacados.csv"
     df_top.to_csv(archivo, index=False, encoding='utf-8-sig')
@@ -284,7 +310,7 @@ def exportar_top_10_trabajos(df_top_10: pd.DataFrame, nombre_archivo: str = "top
         df_top_10.to_excel(archivo_salida, index=False)
     elif formato.lower() == "word":
         archivo_salida = f"{nombre_archivo}.docx"
-        doc = Document()
+        doc = _get_docx_document()()
         doc.add_heading("Top 10 Trabajos Más Relevantes", level=1)
 
         tabla = doc.add_table(rows=1, cols=len(df_top_10.columns))

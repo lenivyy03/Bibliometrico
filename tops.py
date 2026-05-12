@@ -78,46 +78,16 @@ def top_autores(df, tipo):
     else:
         return -1
 
-# HU 41 Top 10 paises con mas publicaciones
-def Obtener_paises(afili): # afili = afiliacion
-    # Se separa por ;, para cada institucion
-    inst = afili.split(';')
-    paises = []
-    for i in inst:
-        partes = i.split(',') # separamos los elementos de cada institucion
-        pais = partes[-1].strip() #tomamos el pais y limpiamos posibles espacios
-        paises.append(pais)
-    return list(set(paises))
-
-def top_paises_publicaciones(df):
-    if df is None: return []
-    if 'Affiliations' not in df.columns: return []
-
-    afiliaciones = df['Affiliations'].dropna()
-    numero_paises = afiliaciones.apply(Obtener_paises).explode().value_counts()
-    return numero_paises.head(10)
-
-# HU 41 Top 10 paises con mas publicaciones
-def Obtener_paises(afili): # afili = afiliacion
-    # Se separa por ;, para cada institucion
-    inst = afili.split(';')
-    paises = []
-    for i in inst:
-        partes = i.split(',') # separamos los elementos de cada institucion
-        pais = partes[-1].strip() #tomamos el pais y limpiamos posibles espacios
-        paises.append(pais)
-    return list(set(paises))
-
-def top_paises_publicaciones(df):
-    if df is None: return []
-    if 'Affiliations' not in df.columns: return []
-
-    afiliaciones = df['Affiliations'].dropna()
-    numero_paises = afiliaciones.apply(Obtener_paises).explode().value_counts()
-    return numero_paises.head(10)
-
-
 import pandas as pd
+
+
+def _extraer_pais_afiliacion(afiliacion_str: str) -> str:
+    """Extrae el país de una afiliación individual, ignorando códigos postales y vacíos."""
+    partes = [p.strip() for p in str(afiliacion_str).split(',')]
+    for parte in reversed(partes):
+        if parte and not parte.replace('-', '').replace(' ', '').isdigit():
+            return parte
+    return ''
 
 
 # Funcion que devuelve una serie con paises de todos los articulos
@@ -126,9 +96,10 @@ def extraer_paises(df):
     # con todas las posibles "afiliaciones" de un solo articulo
     afiliaciones = df['Affiliations'].dropna().str.split(';').explode()
 
-    # En Scopus, la ultima palabra de cada afiliacion individual siempre es el pais.
-    # Creamos una serie escogiendo el pais de cada afiliacion, y cuidamos el formato
-    paises_limpios = afiliaciones.apply(lambda fila: fila.split(',')[-1].strip())
+    # Extraer el país de forma robusta (ignorando códigos postales y cadenas vacías)
+    paises_limpios = afiliaciones.apply(_extraer_pais_afiliacion)
+    # Descartar registros donde no se detectó un país válido
+    paises_limpios = paises_limpios[paises_limpios != '']
     return paises_limpios
 
 

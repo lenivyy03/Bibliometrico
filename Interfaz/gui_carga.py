@@ -114,7 +114,7 @@ class VistaCarga(tk.Frame):
 
         ColorButton(
             acciones,
-            text="Limpiar",
+            text="Nuevo archivo",
             command=self.limpiar,
             bg="#f3f4f6",
             fg=TEXT,
@@ -329,10 +329,15 @@ class VistaCarga(tk.Frame):
         self.detalles_label.configure(text="")
 
     def limpiar(self) -> None:
+        """Limpia el formulario y resetea el estado de la aplicación (HU #55)."""
         self.ruta_var.set("")
         self._mostrar_mensaje("", TEXT, BG)
         self._limpiar_warning()
         self._limpiar_preview()
+        if self.app.df is not None:
+            self.app.df = None
+            self.app.deshabilitar_navegacion()
+            self.app.actualizar_estado("Sin archivo cargado", 0)
 
     def on_show(self) -> None:
         pass

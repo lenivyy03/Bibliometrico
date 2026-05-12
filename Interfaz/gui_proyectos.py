@@ -30,7 +30,30 @@ class VistaProyectos(tk.Frame):
     def crear_encabezado(self):
         head = tk.Frame(self, bg=BG)
         head.grid(row=0, column=0, sticky='ew', padx=24, pady=(24, 10))
-        tk.Label(head, text='Gestion de Proyectos', bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, 'bold')).pack(side='left')
+        head.grid_columnconfigure(0, weight=1)
+        tk.Label(head, text='Gestión de Proyectos', bg=BG, fg=TEXT, font=(FONT_FAMILY, 20, 'bold')).grid(row=0, column=0, sticky='w')
+        ColorButton(
+            head, text='+ Nuevo proyecto',
+            command=self.nuevo_proyecto,
+            bg='#ede9fe', fg=ACCENT, activebackground='#ddd6fe',
+            relief='flat', cursor='hand2',
+            font=(FONT_FAMILY, 10, 'bold'), padx=14, pady=8,
+        ).grid(row=0, column=1, sticky='e')
+
+    def nuevo_proyecto(self):
+        if not messagebox.askyesno(
+            'Nuevo proyecto',
+            '¿Descartar el archivo CSV actual y comenzar desde cero?\n\n'
+            'Los proyectos ya guardados no se borrarán.',
+        ):
+            return
+        self.app.df = None
+        self.app.deshabilitar_navegacion()
+        self.app.actualizar_estado('Sin archivo cargado', 0)
+        self.lbl_mensaje_guardar.configure(
+            text='Listo. Carga un nuevo archivo CSV para comenzar.', fg=SUCCESS
+        )
+        self.nombre_var.set('')
 
     def crear_seccion_guardar(self):
         card = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)

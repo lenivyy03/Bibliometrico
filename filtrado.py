@@ -1,6 +1,23 @@
 import pandas as pd
 import numpy as np
 
+
+def _extraer_pais(afiliacion_str: str) -> str:
+    """Extrae el nombre del país de una afiliación individual de Scopus.
+
+    Scopus usa el formato: 'Dept., Universidad, Ciudad, País'.
+    El país es siempre el último elemento separado por coma, PERO algunos
+    registros terminan en código postal o están vacíos — esta función los
+    descarta buscando desde el final hasta encontrar un token no numérico.
+    """
+    partes = [p.strip() for p in str(afiliacion_str).split(',')]
+    for parte in reversed(partes):
+        # Ignorar vacíos y cadenas que sean solo dígitos / códigos postales
+        if parte and not parte.replace('-', '').replace(' ', '').isdigit():
+            return parte
+    return ''
+
+
 # Función auxiliar (no es ninguna historia), ayuda a quitar el problema de que el nombre de la universidad aparezca
 # junto al nombre del país, es decir, solo extrae el nombre de la universidad
 def extraer_nombre_universidad(afiliacion_completa):
@@ -126,7 +143,7 @@ def filtrar_universidades_por_pais(df, pais_buscado):
 
     # Obtenemos el país de la cadena original primero
     afiliaciones_individuales['Pais'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(
-        lambda x: str(x).split(',')[-1].strip()
+        _extraer_pais
     )
     
     # Aplicar la funcion de extraccion del nombre de la universidad
@@ -172,7 +189,7 @@ def obtener_top_10_universidades_citadas(
     
     # País original
     afiliaciones_individuales['Pais'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(
-        lambda x: str(x).split(',')[-1].strip()
+        _extraer_pais
     )
 
     # Aplicar la funcion de extraccion del nombre de la universidad
@@ -205,37 +222,42 @@ def obtener_top_10_universidades_citadas(
 
 # Historia 39: Ver a qué país pertenece cada universidad del top 10
 def obtener_pais_universidades_top_10(datos_resultados):
-    
+    """Devuelve el país más frecuente para CADA universidad del corpus.
+
+    El diccionario resultante se usa para enriquecer el top 10 filtrado por
+    citas, que puede incluir instituciones que no son top-10 por artículos.
+    Por eso ya no se limita a 10 filas: se mapean todas las universidades.
+    """
     datos_validos = datos_resultados.dropna(subset=['Affiliations']).copy()
-    
+
     datos_validos['Lista_Afiliaciones'] = datos_validos['Affiliations'].apply(
         lambda afiliacion: [afil.strip() for afil in str(afiliacion).split(';') if afil.strip()]
     )
-    
+
     afiliaciones_individuales = datos_validos.explode('Lista_Afiliaciones')
-    
-    # País de la cadena completa
+
     afiliaciones_individuales['Pais'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(
-        lambda x: str(x).split(',')[-1].strip()
+        _extraer_pais
     )
-    
-    # Aplicar la funcion de extraccion del nombre de la universidad
-    afiliaciones_individuales['Universidad_Institucion'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(extraer_nombre_universidad)
-    
-    afiliaciones_sin_repetir = afiliaciones_individuales.drop_duplicates(
-        subset=['EID', 'Universidad_Institucion']
-    ).copy()
-    
-    # Agrupar por Universidad y País
-    ranking_universidades = afiliaciones_sin_repetir.groupby(['Universidad_Institucion', 'Pais']).agg(
-        Numero_Articulos=('EID', 'count')
-    ).reset_index()
-    
-    top_10_universidades = ranking_universidades.sort_values(
-        by='Numero_Articulos', ascending=False
-    ).head(10)
-    
-    return top_10_universidades
+    afiliaciones_individuales['Universidad_Institucion'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(
+        extraer_nombre_universidad
+    )
+
+    # Solo filas donde se extrajo un país válido
+    con_pais = afiliaciones_individuales[afiliaciones_individuales['Pais'] != ''].copy()
+
+    if con_pais.empty:
+        return pd.DataFrame(columns=['Universidad_Institucion', 'Pais'])
+
+    # Para cada universidad, el país que aparece con mayor frecuencia
+    pais_por_univ = (
+        con_pais.groupby('Universidad_Institucion')['Pais']
+        .agg(lambda x: x.value_counts().index[0])
+        .reset_index()
+    )
+    pais_por_univ.columns = ['Universidad_Institucion', 'Pais']
+
+    return pais_por_univ
 
 # Historia 42: Función para ver el porcentaje que representa cada país del top 10 sobre el total del corpus
 def porcentaje_top_10_paises_corpus(datos_resultados):
@@ -250,14 +272,15 @@ def porcentaje_top_10_paises_corpus(datos_resultados):
     afiliaciones_individuales = datos_validos.explode('Lista_Afiliaciones')
     
     afiliaciones_individuales['Pais'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(
-        lambda x: str(x).split(',')[-1].strip()
+        _extraer_pais
     )
     
     paises_sin_repetir = afiliaciones_individuales.drop_duplicates(subset=['EID', 'Pais'])
-    
+    paises_sin_repetir = paises_sin_repetir[paises_sin_repetir['Pais'] != '']
+
     ranking_paises = paises_sin_repetir['Pais'].value_counts().reset_index()
     ranking_paises.columns = ['Pais', 'Numero_Articulos']
-    
+
     # Selecciona el top 10
     top_10_paises = ranking_paises.head(10).copy()
     
@@ -284,15 +307,16 @@ def obtener_top_10_paises_articulos(datos_resultados):
     
     # Extraer el país de cada afiliación individual
     afiliaciones_individuales['Pais'] = afiliaciones_individuales['Lista_Afiliaciones'].apply(
-        lambda x: str(x).split(',')[-1].strip()
+        _extraer_pais
     )
     
-    # Eliminar duplicados por 'EID' y 'Pais' para que, si dos universidades del mismo país 
+    # Eliminar duplicados por 'EID' y 'Pais' para que, si dos universidades del mismo país
     # colaboran en un artículo, ese país solo se cuente una vez para dicho artículo
     paises_sin_repetir = afiliaciones_individuales.drop_duplicates(
         subset=['EID', 'Pais']
     )
-    
+    paises_sin_repetir = paises_sin_repetir[paises_sin_repetir['Pais'] != '']
+
     # Contar los artículos por país
     ranking_paises = paises_sin_repetir['Pais'].value_counts().reset_index()
     ranking_paises.columns = ['Pais', 'Numero_Articulos']

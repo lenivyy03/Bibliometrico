@@ -57,32 +57,17 @@ class VistaExportar(tk.Frame):
         body.grid_columnconfigure(1, weight=3)
         body.grid_rowconfigure(0, weight=1)
 
-        # ── Left panel — scrollable items list ──────────────────────────────
+        # ── Left panel — lista fija (sin scroll, 9 ítems siempre visibles) ─────
         left_outer = tk.Frame(body, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         left_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         left_outer.grid_columnconfigure(0, weight=1)
-        left_outer.grid_rowconfigure(1, weight=1)
 
         tk.Label(left_outer, text="Secciones disponibles", bg=CARD, fg=TEXT,
-                 font=(FONT_FAMILY, 11, "bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
-
-        left_canvas = tk.Canvas(left_outer, bg=CARD, highlightthickness=0)
-        left_canvas.grid(row=1, column=0, sticky="nsew")
-        left_sb = ttk.Scrollbar(left_outer, orient="vertical", command=left_canvas.yview)
-        left_sb.grid(row=1, column=1, sticky="ns")
-        left_canvas.configure(yscrollcommand=left_sb.set)
-
-        left_inner = tk.Frame(left_canvas, bg=CARD)
-        left_win = left_canvas.create_window((0, 0), window=left_inner, anchor="nw")
-        left_inner.bind("<Configure>", lambda _e: left_canvas.configure(scrollregion=left_canvas.bbox("all")))
-        left_canvas.bind("<Configure>", lambda e: left_canvas.itemconfigure(left_win, width=e.width))
-
-        bind_mousewheel(left_canvas, left_canvas)
-        bind_mousewheel(left_inner, left_canvas)
+                 font=(FONT_FAMILY, 11, "bold")).pack(anchor="w", padx=16, pady=(14, 6))
 
         self._item_btns: dict[str, ColorButton] = {}
         for key, label, cat in _ITEMS:
-            fila = tk.Frame(left_inner, bg=CARD)
+            fila = tk.Frame(left_outer, bg=CARD)
             fila.pack(fill="x", padx=12, pady=4)
 
             btn = ColorButton(
@@ -94,7 +79,6 @@ class VistaExportar(tk.Frame):
             )
             btn.configure(command=lambda k=key: self._toggle(k))
             btn.pack(side="left", padx=(0, 10))
-            bind_mousewheel(btn, left_canvas)
             self._item_btns[key] = btn
 
             info = tk.Frame(fila, bg=CARD)
@@ -259,31 +243,42 @@ class VistaExportar(tk.Frame):
         if key == "metricas" and isinstance(data, dict):
             return pd.DataFrame(list(data.items()), columns=["Métrica", "Valor"])
         if key == "paises" and isinstance(data, list):
-            return pd.DataFrame(data, columns=["País", "Artículos"])
+            # HU #43: exportar estrictamente el Top 10 de países
+            return pd.DataFrame(data[:10], columns=["País", "Artículos"])
         if key == "top_trabajos" and isinstance(data, list):
             return pd.DataFrame(data, columns=["Referencia_APA", "Citas", "Año", "DOI"])
         if isinstance(data, pd.DataFrame):
+            # HU #40: top 10 universidades ya viene limitado; forzamos por seguridad
+            if key == "univ_top":
+                return data.head(10)
             return data
         return None
 
     def _compute_top_autores(self):
+        """HU #53 y #36: formato expandido — una fila por título.
+        Col A: Autor | Col B: Título del artículo | Col C: Total artículos del autor.
+        """
         df = self.app.df
         if df is None or df.empty or "Authors" not in df.columns or "Title" not in df.columns:
             return None
         datos = []
         for _, fila in df.dropna(subset=["Authors", "Title"]).iterrows():
+            titulo = str(fila["Title"]).strip()
             for autor in str(fila["Authors"]).split(";"):
                 autor = autor.strip()
                 if autor:
-                    datos.append({"Autor": autor, "Título": str(fila["Title"]).strip()})
+                    datos.append({"Autor": autor, "Título del artículo": titulo})
         if not datos:
             return None
-        df_a = pd.DataFrame(datos)
-        df_g = df_a.groupby("Autor").agg(
-            Publicaciones=("Título", "count"),
-            Títulos=("Título", lambda x: " | ".join(x.unique())),
-        ).reset_index()
-        return df_g.sort_values("Publicaciones", ascending=False).head(10)
+        df_plano = pd.DataFrame(datos)
+        conteos = df_plano.groupby("Autor")["Título del artículo"].nunique()
+        top_10 = conteos.nlargest(10).index
+        df_top = df_plano[df_plano["Autor"].isin(top_10)].copy()
+        df_top["Total artículos"] = df_top["Autor"].map(conteos)
+        df_top = df_top.sort_values(
+            ["Total artículos", "Autor"], ascending=[False, True]
+        ).reset_index(drop=True)
+        return df_top[["Autor", "Título del artículo", "Total artículos"]]
 
     def _compute_apa(self):
         df = self.app.df
@@ -341,7 +336,13 @@ class VistaExportar(tk.Frame):
                 df.to_excel(writer, sheet_name=sheet, index=False)
 
     def _exportar_word(self, claves: list, ruta: str) -> None:
-        from docx import Document
+        try:
+            from docx import Document
+        except ImportError:
+            raise ImportError(
+                "La librería python-docx no está instalada.\n"
+                "Instálala con:  pip install python-docx"
+            )
         doc = Document()
         doc.add_heading("Reporte Bibliométrico", level=0)
         for key in claves:
@@ -361,15 +362,15 @@ class VistaExportar(tk.Frame):
         doc.save(ruta)
 
     def _exportar_csv_zip(self, claves: list, ruta: str) -> None:
+        BOM = b'\xef\xbb\xbf'  # UTF-8 BOM — necesario para que Excel abra sin errores
         with zipfile.ZipFile(ruta, "w", zipfile.ZIP_DEFLATED) as zf:
             for key in claves:
                 df = self._get_df_for_key(key)
                 if df is None or df.empty:
                     continue
                 nombre = _LABELS.get(key, key).replace(" ", "_") + ".csv"
-                buf = io.StringIO()
-                df.to_csv(buf, index=False, encoding="utf-8-sig")
-                zf.writestr(nombre, buf.getvalue())
+                csv_bytes = BOM + df.to_csv(index=False).encode("utf-8")
+                zf.writestr(nombre, csv_bytes)
 
     def on_show(self) -> None:
         for key, _, _ in _ITEMS:

@@ -8,6 +8,13 @@ import pandas as pd
 
 from gui_utils import (FONT_FAMILY, FONT_SM, FONT_MD, FONT_LG, PAD_HEADER, PAD_CARD,
                        ColorButton, bind_mousewheel)
+from compat_imports import load_project_module
+
+# ── Backend modules (para cálculo bajo demanda cuando el getter no existe) ──
+_conteo_mod = load_project_module("conteo")
+_filtrado_mod = load_project_module("filtrado")
+_impacto_mod = load_project_module("impacto")
+_tops_mod = load_project_module("tops")
 
 BG = "#f5f5f5"
 CARD = "#ffffff"
@@ -120,7 +127,7 @@ class VistaExportar(tk.Frame):
         # Bottom — format buttons
         bottom = tk.Frame(self, bg=BG)
         bottom.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 24))
-        self.status_label = tk.Label(bottom, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, 10))
+        self.status_label = tk.Label(bottom, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
         self.status_label.pack(anchor="w", pady=(0, 8))
         acciones = tk.Frame(bottom, bg=BG)
         acciones.pack(anchor="w")
@@ -128,19 +135,19 @@ class VistaExportar(tk.Frame):
             acciones, text="Exportar como Excel",
             command=lambda: self._exportar("excel"),
             bg=ACCENT, fg="white", relief="flat", cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"), padx=16, pady=8,
+            font=(FONT_FAMILY, FONT_MD, "bold"), padx=16, pady=8,
         ).pack(side="left")
         ColorButton(
             acciones, text="Exportar como Word",
             command=lambda: self._exportar("word"),
             bg="#ede9fe", fg=ACCENT, relief="flat", cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"), padx=16, pady=8,
+            font=(FONT_FAMILY, FONT_MD, "bold"), padx=16, pady=8,
         ).pack(side="left", padx=(10, 0))
         ColorButton(
             acciones, text="Exportar como CSV (.zip)",
             command=lambda: self._exportar("csv"),
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2",
-            font=(FONT_FAMILY, 10, "bold"), padx=16, pady=8,
+            font=(FONT_FAMILY, FONT_MD, "bold"), padx=16, pady=8,
         ).pack(side="left", padx=(10, 0))
 
         # Register callbacks so external toggles update our buttons too
@@ -179,7 +186,7 @@ class VistaExportar(tk.Frame):
             tk.Label(
                 self._preview_frame,
                 text="Ninguna sección seleccionada.\n\nUsa los botones  Exportar ✓  en cada sección,\no marca directamente aquí con los círculos.",
-                bg=CARD, fg=MUTED, font=(FONT_FAMILY, 10), justify="left",
+                bg=CARD, fg=MUTED, font=(FONT_FAMILY, FONT_MD), justify="left",
                 wraplength=self._preview_wraplength, anchor="nw",
             ).grid(row=0, column=0, sticky="nw")
             self.status_label.configure(text="")
@@ -189,7 +196,7 @@ class VistaExportar(tk.Frame):
         tk.Label(
             self._preview_frame,
             text=f"{n} sección{'es' if n > 1 else ''} seleccionada{'s' if n > 1 else ''}:",
-            bg=CARD, fg=TEXT, font=(FONT_FAMILY, 10, "bold"),
+            bg=CARD, fg=TEXT, font=(FONT_FAMILY, FONT_MD, "bold"),
         ).grid(row=0, column=0, sticky="w", pady=(0, 10))
 
         for i, (key, label) in enumerate(seleccionados):
@@ -197,50 +204,73 @@ class VistaExportar(tk.Frame):
             fila = tk.Frame(self._preview_frame, bg=CARD)
             fila.grid(row=i + 1, column=0, sticky="ew", pady=3)
             tk.Label(fila, text="✓", bg=CARD, fg=SUCCESS,
-                     font=(FONT_FAMILY, 10, "bold"), width=2).pack(side="left")
+                     font=(FONT_FAMILY, FONT_MD, "bold"), width=2).pack(side="left")
             tk.Label(fila, text=f"{label}  —  {desc}", bg=CARD, fg=TEXT,
-                     font=(FONT_FAMILY, 10), wraplength=self._preview_wraplength - 20,
+                     font=(FONT_FAMILY, FONT_MD), wraplength=self._preview_wraplength - 20,
                      justify="left").pack(side="left", fill="x")
 
         self.status_label.configure(text=f"{n} sección(es) lista(s) para exportar.")
 
     def _describir(self, key: str) -> str:
+        if self.app.df is None:
+            return "sin datos cargados"
         if key in ("top_autores", "apa"):
-            if self.app.df is None:
-                return "sin datos cargados"
             return f"{len(self.app.df)} artículos disponibles"
+
+        # Intentar getter registrado primero, luego fallback
         getter = self.app.export_getters.get(key)
-        if getter is None:
-            return "sin datos — visita la sección primero"
-        try:
-            data = getter()
-            if data is None:
-                return "sin datos"
-            if isinstance(data, dict):
-                return f"{len(data)} métricas"
-            if isinstance(data, pd.DataFrame):
-                return f"{len(data)} registros"
-            if isinstance(data, list):
-                return f"{len(data)} elementos"
-            return "datos disponibles"
-        except Exception:
-            return "sin datos"
+        data = None
+        if getter is not None:
+            try:
+                data = getter()
+            except Exception:
+                data = None
+
+        if data is None:
+            # Describir sin computar todo: si hay df cargado, los datos se pueden generar
+            return "datos disponibles al exportar"
+
+        if isinstance(data, dict):
+            return f"{len(data)} métricas"
+        if isinstance(data, pd.DataFrame):
+            return f"{len(data)} registros"
+        if isinstance(data, list):
+            return f"{len(data)} elementos"
+        return "datos disponibles"
 
     # ── Data getters ──────────────────────────────────────────────────────────
 
     def _get_df_for_key(self, key: str):
+        """Obtiene un DataFrame listo para exportar.
+
+        Primero intenta usar el getter registrado por la vista correspondiente
+        (datos ya calculados y en memoria). Si no existe (el usuario nunca
+        visitó esa sección), calcula los datos bajo demanda usando las mismas
+        funciones del backend que usan las vistas individuales.
+        """
+        # Secciones que siempre se computan directamente desde el df global
         if key == "top_autores":
             return self._compute_top_autores()
         if key == "apa":
             return self._compute_apa()
 
+        # Intentar getter registrado por la vista
         getter = self.app.export_getters.get(key)
-        if getter is None:
-            return None
-        data = getter()
+        data = None
+        if getter is not None:
+            try:
+                data = getter()
+            except Exception:
+                data = None
+
+        # ── Fallback: calcular bajo demanda si no hay getter o devolvió None ─
+        if data is None:
+            data = self._compute_fallback(key)
+
         if data is None:
             return None
 
+        # ── Convertir al formato DataFrame uniforme ──────────────────────────
         if key == "metricas" and isinstance(data, dict):
             return pd.DataFrame(list(data.items()), columns=["Métrica", "Valor"])
         if key == "paises" and isinstance(data, list):
@@ -249,10 +279,47 @@ class VistaExportar(tk.Frame):
         if key == "top_trabajos" and isinstance(data, list):
             return pd.DataFrame(data, columns=["Referencia_APA", "Citas", "Año", "DOI"])
         if isinstance(data, pd.DataFrame):
-            # HU #40: top 10 universidades ya viene limitado; forzamos por seguridad
             if key == "univ_top":
                 return data.head(10)
             return data
+        return None
+
+    def _compute_fallback(self, key: str):
+        """Calcula datos bajo demanda cuando el usuario no ha visitado la sección.
+
+        Usa exactamente las mismas funciones del backend que usan las vistas
+        individuales, garantizando consistencia en los resultados.
+        """
+        df = self.app.df
+        if df is None or df.empty:
+            return None
+        try:
+            if key == "metricas":
+                return _conteo_mod.metricas_prod(df)
+
+            if key == "autoria_est":
+                return _filtrado_mod.tabla_comparativa_autoria(df)
+
+            if key == "paises":
+                paises = _tops_mod.extraer_paises(df)
+                freqs = _tops_mod.obtener_frecuencias_paises(paises)
+                return [(pais, int(conteo)) for pais, conteo in freqs.items()]
+
+            if key == "univ_lista":
+                return _filtrado_mod.obtener_ranking_universidades(df)
+
+            if key == "univ_top":
+                return _filtrado_mod.obtener_top_10_universidades_citadas(df)
+
+            if key == "citas":
+                tabla = _impacto_mod.calcular_promedio_citas_anual(df)
+                return _impacto_mod.ordenar_por_promedio_citas(tabla)
+
+            if key == "top_trabajos":
+                return list(_tops_mod.top_10_trabajos(df))
+
+        except Exception:
+            return None
         return None
 
     def _compute_top_autores(self):

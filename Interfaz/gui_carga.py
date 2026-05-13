@@ -11,6 +11,9 @@ from compat_imports import load_project_module
 carga_mod = load_project_module("carga")
 cargar_csv = carga_mod.cargar_csv
 
+proyectos_mod = load_project_module("proyectos")
+guardar_proyecto = proyectos_mod.guardar_proyecto
+
 BG = "#f5f5f5"
 CARD = "#ffffff"
 TEXT = "#1f2937"
@@ -31,14 +34,15 @@ class VistaCarga(tk.Frame):
         self.app = app
         self.detalles_visibles = False
 
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(5, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        self._crear_encabezado()
-        self._crear_formulario()
-        self._crear_mensajes()
-        self._crear_warning_panel()
-        self._crear_preview()
+        self._crear_encabezado()        # row=0
+        self._crear_banner_proyecto()   # row=1  ← nuevo
+        self._crear_formulario()        # row=2
+        self._crear_mensajes()          # row=3
+        self._crear_warning_panel()     # row=4
+        self._crear_preview()           # row=5
 
     def _crear_encabezado(self) -> None:
         encabezado = tk.Frame(self, bg=BG)
@@ -61,9 +65,39 @@ class VistaCarga(tk.Frame):
             font=(FONT_FAMILY, FONT_MD),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
+    def _crear_banner_proyecto(self) -> None:
+        """Banner visible cuando el usuario llega desde 'Nuevo proyecto'."""
+        self._banner_frame = tk.Frame(
+            self, bg="#ede9fe",
+            highlightbackground="#c4b5fd", highlightthickness=1,
+        )
+        self._banner_frame.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 6))
+        self._banner_frame.grid_columnconfigure(0, weight=1)
+        self._banner_frame.grid_remove()  # oculto por defecto
+
+        self._banner_label = tk.Label(
+            self._banner_frame, text="",
+            bg="#ede9fe", fg=ACCENT,
+            font=(FONT_FAMILY, FONT_MD, "bold"),
+            anchor="w", justify="left",
+        )
+        self._banner_label.grid(row=0, column=0, sticky="w", padx=16, pady=10)
+
+        ColorButton(
+            self._banner_frame, text="Cancelar",
+            command=self._cancelar_proyecto_pendiente,
+            bg="#ede9fe", fg=ACCENT, activebackground="#ddd6fe",
+            relief="flat", cursor="hand2",
+            font=(FONT_FAMILY, FONT_SM), padx=10, pady=4,
+        ).grid(row=0, column=1, padx=(0, 12), pady=10)
+
+    def _cancelar_proyecto_pendiente(self) -> None:
+        self.app.proyecto_pendiente = None
+        self._banner_frame.grid_remove()
+
     def _crear_formulario(self) -> None:
         formulario = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
-        formulario.grid(row=1, column=0, sticky="ew", padx=24, pady=(0, 12))
+        formulario.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 12))
         formulario.grid_columnconfigure(0, weight=1)
 
         tk.Label(
@@ -129,7 +163,7 @@ class VistaCarga(tk.Frame):
 
     def _crear_mensajes(self) -> None:
         self.mensaje_frame = tk.Frame(self, bg=BG)
-        self.mensaje_frame.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 8))
+        self.mensaje_frame.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 8))
         self.mensaje_frame.grid_columnconfigure(0, weight=1)
 
         self.mensaje_label = tk.Label(
@@ -146,7 +180,7 @@ class VistaCarga(tk.Frame):
 
     def _crear_warning_panel(self) -> None:
         self.warning_panel = tk.Frame(self, bg=WARN_BG, highlightbackground="#f59e0b", highlightthickness=1)
-        self.warning_panel.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 8))
+        self.warning_panel.grid(row=4, column=0, sticky="ew", padx=24, pady=(0, 8))
         self.warning_panel.grid_columnconfigure(1, weight=1)
         self.warning_panel.grid_remove()
 
@@ -196,7 +230,7 @@ class VistaCarga(tk.Frame):
 
     def _crear_preview(self) -> None:
         contenedor = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
-        contenedor.grid(row=4, column=0, sticky="nsew", padx=24, pady=(0, 24))
+        contenedor.grid(row=5, column=0, sticky="nsew", padx=24, pady=(0, 24))
         contenedor.grid_rowconfigure(1, weight=1)
         contenedor.grid_columnconfigure(0, weight=1)
 
@@ -255,15 +289,32 @@ class VistaCarga(tk.Frame):
             return
 
         self.app.df = resultado.get("dataframe")
+        total = resultado.get("total_registros", 0)
         nombre_archivo = os.path.basename(ruta)
-        self.app.actualizar_estado(nombre_archivo, resultado.get("total_registros", 0))
+        self.app.actualizar_estado(nombre_archivo, total)
         self.app.habilitar_navegacion()
 
-        self._mostrar_mensaje(
-            f"✓ {resultado.get('mensaje', 'Archivo cargado correctamente')} · {resultado.get('total_registros', 0)} registros detectados.",
-            SUCCESS,
-            SUCCESS_BG,
-        )
+        # Auto-guardado si venimos de "Nuevo proyecto"
+        pendiente = getattr(self.app, "proyecto_pendiente", None)
+        if pendiente:
+            try:
+                guardar_proyecto(self.app.df, pendiente)
+                self.app.proyecto_pendiente = None
+                self._banner_frame.grid_remove()
+                self._mostrar_mensaje(
+                    f"✓ CSV cargado · proyecto \"{pendiente}\" guardado · {total} registros.",
+                    SUCCESS, SUCCESS_BG,
+                )
+            except Exception as exc:
+                self._mostrar_mensaje(
+                    f"✓ CSV cargado ({total} registros). No se pudo guardar el proyecto: {exc}",
+                    SUCCESS, SUCCESS_BG,
+                )
+        else:
+            self._mostrar_mensaje(
+                f"✓ {resultado.get('mensaje', 'Archivo cargado correctamente')} · {total} registros detectados.",
+                SUCCESS, SUCCESS_BG,
+            )
 
         self._mostrar_preview(resultado.get("preview", [])[:3])
 
@@ -335,10 +386,21 @@ class VistaCarga(tk.Frame):
         self._mostrar_mensaje("", TEXT, BG)
         self._limpiar_warning()
         self._limpiar_preview()
+        # Si había un proyecto pendiente, cancelarlo también
+        if getattr(self.app, "proyecto_pendiente", None):
+            self.app.proyecto_pendiente = None
+            self._banner_frame.grid_remove()
         if self.app.df is not None:
             self.app.df = None
             self.app.deshabilitar_navegacion()
             self.app.actualizar_estado("Sin archivo cargado", 0)
 
     def on_show(self) -> None:
-        pass
+        pendiente = getattr(self.app, "proyecto_pendiente", None)
+        if pendiente:
+            self._banner_label.configure(
+                text=f'Nuevo proyecto: "{pendiente}"  —  carga el CSV para guardarlo automáticamente',
+            )
+            self._banner_frame.grid()
+        else:
+            self._banner_frame.grid_remove()

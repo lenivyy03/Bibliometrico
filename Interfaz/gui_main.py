@@ -76,6 +76,7 @@ class AppBibliometrico(tk.Tk):
         self.export_selections: set = set()
         self.export_getters: dict = {}
         self.export_toggle_cbs: dict = {}
+        self.proyecto_pendiente: str | None = None
 
         self._configurar_estilos()
         self._crear_layout()

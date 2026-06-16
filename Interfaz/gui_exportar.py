@@ -25,15 +25,16 @@ BORDER = "#e5e7eb"
 SUCCESS = "#16a34a"
 
 _ITEMS = [
-    ("metricas",     "Métricas generales",        "Productividad"),
-    ("autoria_est",  "Estadísticas de autoría",   "Autoría"),
-    ("top_autores",  "Top 10 autores",            "Autoría"),
-    ("paises",       "Lista de países",           "Geografía"),
-    ("univ_lista",   "Ranking universidades",     "Geografía"),
-    ("univ_top",     "Top 10 universidades",      "Geografía"),
-    ("citas",        "Promedio anual de citas",   "Impacto"),
-    ("top_trabajos", "Top 10 trabajos",           "Impacto"),
-    ("apa",          "Referencias APA",           "General"),
+    ("metricas",      "Métricas generales",        "Productividad"),
+    ("autoria_est",   "Estadísticas de autoría",   "Autoría"),
+    ("top_autores",   "Top 10 autores",            "Autoría"),
+    ("paises",        "Lista de países",           "Geografía"),
+    ("paises_top10",  "Top 10 países",             "Geografía"),
+    ("univ_lista",    "Ranking universidades",     "Geografía"),
+    ("univ_top",      "Top 10 universidades",      "Geografía"),
+    ("citas",         "Promedio anual de citas",   "Impacto"),
+    ("top_trabajos",  "Top 10 trabajos",           "Impacto"),
+    ("apa",           "Referencias APA",           "General"),
 ]
 
 _LABELS = {k: l for k, l, _ in _ITEMS}
@@ -65,17 +66,31 @@ class VistaExportar(tk.Frame):
         body.grid_columnconfigure(1, weight=3)
         body.grid_rowconfigure(0, weight=1)
 
-        # ── Left panel — lista fija (sin scroll, 9 ítems siempre visibles) ─────
+        # ── Left panel — lista con scroll ────────────────────────────────────
         left_outer = tk.Frame(body, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
         left_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         left_outer.grid_columnconfigure(0, weight=1)
+        left_outer.grid_rowconfigure(1, weight=1)
 
         tk.Label(left_outer, text="Secciones disponibles", bg=CARD, fg=TEXT,
-                 font=(FONT_FAMILY, FONT_MD, "bold")).pack(anchor="w", padx=16, pady=(10, 4))
+                 font=(FONT_FAMILY, FONT_MD, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(10, 4))
+
+        left_canvas = tk.Canvas(left_outer, bg=CARD, highlightthickness=0)
+        left_canvas.grid(row=1, column=0, sticky="nsew")
+        left_sb = ttk.Scrollbar(left_outer, orient="vertical", command=left_canvas.yview)
+        left_sb.grid(row=1, column=1, sticky="ns")
+        left_canvas.configure(yscrollcommand=left_sb.set)
+
+        left_inner = tk.Frame(left_canvas, bg=CARD)
+        left_win = left_canvas.create_window((0, 0), window=left_inner, anchor="nw")
+        left_inner.bind("<Configure>", lambda _e: left_canvas.configure(scrollregion=left_canvas.bbox("all")))
+        left_canvas.bind("<Configure>", lambda e: left_canvas.itemconfigure(left_win, width=e.width))
+        bind_mousewheel(left_canvas, left_canvas)
+        bind_mousewheel(left_inner, left_canvas)
 
         self._item_btns: dict[str, ColorButton] = {}
         for key, label, cat in _ITEMS:
-            fila = tk.Frame(left_outer, bg=CARD)
+            fila = tk.Frame(left_inner, bg=CARD)
             fila.pack(fill="x", padx=12, pady=PAD_CARD)
 
             btn = ColorButton(
@@ -95,6 +110,9 @@ class VistaExportar(tk.Frame):
                      font=(FONT_FAMILY, FONT_MD, "bold"), anchor="w").pack(anchor="w")
             tk.Label(info, text=cat, bg=CARD, fg=MUTED,
                      font=(FONT_FAMILY, FONT_SM), anchor="w").pack(anchor="w")
+
+            bind_mousewheel(fila, left_canvas)
+            bind_mousewheel(info, left_canvas)
 
         # ── Right panel — scrollable preview ────────────────────────────────
         right_outer = tk.Frame(body, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
@@ -274,7 +292,8 @@ class VistaExportar(tk.Frame):
         if key == "metricas" and isinstance(data, dict):
             return pd.DataFrame(list(data.items()), columns=["Métrica", "Valor"])
         if key == "paises" and isinstance(data, list):
-            # HU #43: exportar estrictamente el Top 10 de países
+            return pd.DataFrame(data, columns=["País", "Artículos"])
+        if key == "paises_top10" and isinstance(data, list):
             return pd.DataFrame(data[:10], columns=["País", "Artículos"])
         if key == "top_trabajos" and isinstance(data, list):
             return pd.DataFrame(data, columns=["Referencia_APA", "Citas", "Año", "DOI"])
@@ -300,7 +319,7 @@ class VistaExportar(tk.Frame):
             if key == "autoria_est":
                 return _filtrado_mod.tabla_comparativa_autoria(df)
 
-            if key == "paises":
+            if key in ("paises", "paises_top10"):
                 paises = _tops_mod.extraer_paises(df)
                 freqs = _tops_mod.obtener_frecuencias_paises(paises)
                 return [(pais, int(conteo)) for pais, conteo in freqs.items()]

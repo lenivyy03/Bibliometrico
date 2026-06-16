@@ -87,17 +87,25 @@ class VistaPaises(_BaseVistaGeo):
         self.busqueda_var = tk.StringVar()
         self.busqueda_var.trace_add("write", lambda *_: self.aplicar_filtro())
         styled_entry(filtro, textvariable=self.busqueda_var, font=(FONT_FAMILY, FONT_MD)).grid(row=0, column=1, sticky="ew", padx=(10, 0), ipady=PAD_ENTRY)
+        self._export_paises_sel = False
+        self._export_top10_sel = False
         self._btn_exportar_paises = ColorButton(
-            filtro, text="Exportar ✓", command=self._toggle_exportar_paises,
+            filtro, text="Exportar ▾", command=self._show_exportar_menu,
             bg="#f3f4f6", fg=TEXT, relief="flat", cursor="hand2", padx=12, pady=7)
         self._btn_exportar_paises.grid(row=0, column=2, padx=(8, 0))
         self.app.registrar_toggle_cb("paises", self._on_toggle_cb_paises)
+        self.app.registrar_toggle_cb("paises_top10", self._on_toggle_cb_paises_top10)
+
+        leyenda_frame = tk.Frame(self, bg=BG)
+        leyenda_frame.grid(row=3, column=0, sticky="ew", padx=24, pady=(0, 4))
+        tk.Frame(leyenda_frame, bg="#d9f99d", width=16, height=16).pack(side="left")
+        tk.Label(leyenda_frame, text=" = Top 10 países con más artículos", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD)).pack(side="left")
 
         tabla_card = tk.Frame(self, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
-        tabla_card.grid(row=3, column=0, sticky="nsew", padx=24, pady=(0, 10))
+        tabla_card.grid(row=4, column=0, sticky="nsew", padx=24, pady=(0, 10))
         tabla_card.grid_rowconfigure(0, weight=1)
         tabla_card.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(4, weight=1)
 
         self.tree = ttk.Treeview(tabla_card, columns=("Pais", "Articulos"), show="headings")
         self.tree.heading("Pais", text="País")
@@ -107,12 +115,13 @@ class VistaPaises(_BaseVistaGeo):
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree.bind("<<TreeviewSelect>>", self._mostrar_porcentaje)
         setup_treeview_tags(self.tree)
+        self.tree.tag_configure("top10", background="#d9f99d")
         scroll = ttk.Scrollbar(tabla_card, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scroll.set)
         scroll.grid(row=0, column=1, sticky="ns")
 
         self.porcentaje_label = tk.Label(self, text="", bg=BG, fg=MUTED, font=(FONT_FAMILY, FONT_MD))
-        self.porcentaje_label.grid(row=4, column=0, sticky="w", padx=24, pady=(0, 24))
+        self.porcentaje_label.grid(row=5, column=0, sticky="w", padx=24, pady=(0, 24))
 
     def cargar_datos(self) -> None:
         self._set_error("")
@@ -130,6 +139,7 @@ class VistaPaises(_BaseVistaGeo):
             total_articulos = int(self.app.df["Affiliations"].dropna().shape[0]) if "Affiliations" in self.app.df.columns else 0
             self.lbl_total_articulos.configure(text=f"Artículos con afiliación: {total_articulos}")
             self.app.export_getters["paises"] = lambda: self._tabla_completa
+            self.app.export_getters["paises_top10"] = lambda: self._tabla_completa
             self.aplicar_filtro()
             self._set_status("Datos actualizados.")
         except Exception as exc:
@@ -142,8 +152,12 @@ class VistaPaises(_BaseVistaGeo):
         datos = self._tabla_completa
         if consulta:
             datos = [fila for fila in datos if consulta in str(fila[0]).lower()]
+        top10_paises = {fila[0] for fila in self._tabla_completa[:10]}
         for idx, (pais, conteo) in enumerate(datos):
-            insert_striped(self.tree, idx, (pais, conteo))
+            if pais in top10_paises:
+                self.tree.insert("", "end", values=(pais, conteo), tags=("top10",))
+            else:
+                insert_striped(self.tree, idx, (pais, conteo))
         self.porcentaje_label.configure(text="")
 
     def _mostrar_porcentaje(self, _event=None) -> None:
@@ -158,17 +172,37 @@ class VistaPaises(_BaseVistaGeo):
         porcentaje = (conteo / total) * 100
         self.porcentaje_label.configure(text=f"{pais} representa {porcentaje:.2f}% del total de afiliaciones contabilizadas.")
 
-    def _toggle_exportar_paises(self) -> None:
+    def _show_exportar_menu(self) -> None:
         if not self._tabla_completa:
             messagebox.showwarning("Sin datos", "Carga los datos primero.")
             return
-        self.app.toggle_exportacion("paises")
+        menu = tk.Menu(self, tearoff=0)
+        lista_check = "✓  " if self._export_paises_sel else "     "
+        top10_check = "✓  " if self._export_top10_sel else "     "
+        menu.add_command(
+            label=f"{lista_check}Lista completa",
+            command=lambda: self.app.toggle_exportacion("paises"),
+        )
+        menu.add_command(
+            label=f"{top10_check}Top 10 países",
+            command=lambda: self.app.toggle_exportacion("paises_top10"),
+        )
+        btn = self._btn_exportar_paises
+        menu.post(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
+
+    def _update_exportar_btn(self) -> None:
+        if self._export_paises_sel or self._export_top10_sel:
+            self._btn_exportar_paises.configure(bg="#22c55e", fg="white", text="✓ Exportar ▾")
+        else:
+            self._btn_exportar_paises.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ▾")
 
     def _on_toggle_cb_paises(self, seleccionado: bool) -> None:
-        if seleccionado:
-            self._btn_exportar_paises.configure(bg="#22c55e", fg="white", text="✓ Exportar")
-        else:
-            self._btn_exportar_paises.configure(bg="#f3f4f6", fg=TEXT, text="Exportar ✓")
+        self._export_paises_sel = seleccionado
+        self._update_exportar_btn()
+
+    def _on_toggle_cb_paises_top10(self, seleccionado: bool) -> None:
+        self._export_top10_sel = seleccionado
+        self._update_exportar_btn()
 
     def on_show(self) -> None:
         if self.app.df is not None:

@@ -119,12 +119,17 @@ def apply_theme(root: tk.Misc) -> None:
             ],
         })
     ])
+    # NOTA: bajo el tema "clam" el grosor real lo controla `arrowsize`,
+    # no `width` (que se ignora). Por eso ambos deben ir juntos para que
+    # la barra se vea fina y consistente en todas las secciones.
+    # bordercolor se iguala al color del thumb para que el "grip" que clam
+    # dibuja en el centro no aparezca como una muesca blanca partiendo la barra.
     style.configure("Vertical.TScrollbar",
-                     width=8, troughcolor=_BORDER, background="#bfc5ce",
-                     borderwidth=0, relief="flat")
+                     width=12, arrowsize=12, troughcolor=_CARD, background="#bfc5ce",
+                     bordercolor="#bfc5ce", borderwidth=0, relief="flat")
     style.configure("Horizontal.TScrollbar",
-                     width=8, troughcolor=_BORDER, background="#bfc5ce",
-                     borderwidth=0, relief="flat")
+                     width=12, arrowsize=12, troughcolor=_CARD, background="#bfc5ce",
+                     bordercolor="#bfc5ce", borderwidth=0, relief="flat")
     style.map("Vertical.TScrollbar",
               background=[("active", _MUTED), ("!active", "#bfc5ce")])
     style.map("Horizontal.TScrollbar",
